@@ -3755,6 +3755,7 @@ const _buildBuilding=buildBuilding;buildBuilding=function(b){const r=_buildBuild
 const _rebuildAllF=rebuildAll;rebuildAll=function(){for(const id of [...FMM.keys()])if(!bById(id)){FMM.get(id).forEach(o=>freeMesh(o.m));FMM.delete(id);}return _rebuildAllF.apply(this,arguments);};
 fmOff=function(){return true;};try{syncFloorMarks();}catch(e){}
 /* 最高一层：每个单位朝外的墙上印门牌号（整排同一个号码） */
+Object.assign(I18N.zh,{un_no:'最高一层墙上写门牌号（整排同号）'});Object.assign(I18N.en,{un_no:'Write unit numbers on the top floor walls'});Object.assign(I18N.ms,{un_no:'Tulis nombor unit di tingkat teratas'});
 const FMU=new Map();
 function fmTexU(s){const k='u:'+s;if(FMT.has(k))return FMT.get(k);const c=document.createElement('canvas');const fs=84;const g0=c.getContext('2d');g0.font=`900 ${fs}px -apple-system,"Helvetica Neue",Arial,sans-serif`;
   const tw=Math.ceil(g0.measureText(s).width);c.width=Math.max(120,tw+60);c.height=116;const g=c.getContext('2d');
