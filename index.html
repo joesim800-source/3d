@@ -766,7 +766,7 @@ function quad(a,p0,p1,p2,p3,n,c,uv){const u=uv||[[0,0],[0,0],[0,0],[0,0]];const 
 function texFrom(src){const tx=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,tx);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,src);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);return tx;}
 const white=(()=>{const tx=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,tx);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([255,255,255,255]));return tx;})();
-const IS_TOUCH=('ontouchstart' in window)||navigator.maxTouchPoints>0;const SMS=IS_TOUCH?1024:2048;const smTex=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,smTex);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,SMS,SMS,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
+const APP_VER='版本 2026-11-24';const IS_TOUCH=('ontouchstart' in window)||navigator.maxTouchPoints>0;const SMS=IS_TOUCH?1024:2048;const smTex=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,smTex);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,SMS,SMS,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
 gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
 const smFB=gl.createFramebuffer(),smRB=gl.createRenderbuffer();gl.bindFramebuffer(gl.FRAMEBUFFER,smFB);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,smTex,0);
 gl.bindRenderbuffer(gl.RENDERBUFFER,smRB);gl.renderbufferStorage(gl.RENDERBUFFER,gl.DEPTH_COMPONENT16,SMS,SMS);gl.framebufferRenderbuffer(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.RENDERBUFFER,smRB);gl.bindFramebuffer(gl.FRAMEBUFFER,null);
@@ -984,7 +984,7 @@ function buildOverlay(){
 let calcT=null;
 function invalidate(){dirty={sun:true,noise:true,wind:true};clearTimeout(calcT);calcT=setTimeout(()=>{if(S.mode!=='none'){ensure(S.mode);paint();buildOverlay();legend();}if(panelMode==='b')renderPanel();},150);}
 function windName(){const w=WINDS.find(w=>w[1]===S.windFrom);return w?t(w[0]):S.windFrom+'°';}
-function setMode(m,quiet){S.mode=m;modeLabel();document.querySelectorAll('#modeSeg button').forEach(b=>b.classList.toggle('sel',b.dataset.m===m));
+function setMode(m,quiet){if(!['none','look','sun','west','noise','wind','type','band'].includes(m))m='none';S.mode=m;modeLabel();document.querySelectorAll('#modeSeg button').forEach(b=>b.classList.toggle('sel',b.dataset.m===m));
   const go=()=>{ensure(m);paint();buildOverlay();legend();if(panelMode==='b')renderPanel();
     if(!quiet&&m==='look')toast(t('mode_look_t'));else if(!quiet&&(m==='type'||m==='band'))toast(m==='type'?t('mode_type_t'):t('mode_band_t',S.bandEvery));
     else if(!quiet&&m!=='none')toast(m==='sun'?t('mode_sun_t',dateLabel()):m==='west'?t('mode_west_t',S.westFrom):m==='noise'?(S.roads.length?t('mode_noise_t',S.night?t('night'):t('day')):t('mode_noise_none')):t('mode_wind_t',windName()));};
@@ -1245,7 +1245,7 @@ function panelBody(){
   if(panelMode==='plans')return plansHTML();
   if(panelMode==='proj')return projHTML();
   if(panelMode==='menu'){const B=(id,lab,cls)=>`<button data-px="${id}" class="${cls||''}">${lab}</button>`;
-    return `<h3><span>${t('menu_title')}</span><button id="pClose">${t('close')}</button></h3>
+    return `<h3><span>${t('menu_title')} <small style="font-size:12px;color:#1e6b57;font-weight:600">${APP_VER}</small></span><button id="pClose">${t('close')}</button></h3>
     <button data-px="xProj" class="go" style="width:100%;margin-bottom:10px;text-align:left;font-size:15px">📁 ${esc(curProj().name)} ▸</button>
     <div class="mbig">${B('bAI','🤖 '+t('b_ai'),'ai')}${B('xDraw',t('dw_menu'))}${B('xPlans',t('pn_menu'))}${B('xItems','🌴 '+t('it_menu'))}${B('xPlace','📍 '+t('pl_title'))}${B('xSlots',t('sl_menu'))}${B('xPaint','🎨 '+t('pt_title'))}${B('bSet','🗺️ '+t('mn_base'))}${B('xNote',t('nt_menu'))}${B('xDrive',t('dv_menu'))}${B('xTx','💰 '+t('tx_menu'))}${B('bPres','🎬 '+t('b_pres'))}</div>
     <div class="mview">${B('bTop',t('b_top'))}${B('b3d','3D')}${B('bView',t('b_view'))}${B('bPres',t('b_pres'))}</div>
@@ -1302,7 +1302,7 @@ function panelBody(){
     h+=floorRows(b);if(b.type==='own'&&S.mode==='none')h+=`<p class="hint">${t('rows_none')}</p>`;return h;}
   const custom=!CITIES.some(c=>c[0]===S.city);
   const opts=CITIES.map(c=>`<option value="${c[0]}"${S.city===c[0]?' selected':''}>${LANG==='zh'?c[1]+' '+c[2]:c[2]}</option>`).join('')+`<option value="custom"${custom?' selected':''}>${t('s_custom')}</option>`;
-  return `<h3><span>${t('s_title')}</span><button id="pClose">${t('done')}</button></h3>
+  return `<h3><span>${t('s_title')} <small style="font-size:12px;color:#1e6b57;font-weight:600">${APP_VER}</small></span><button id="pClose">${t('done')}</button></h3>
   <div class="row"><label>${t('s_city')}</label><select id="sCity">${opts}</select></div>
   <div class="row"><label>${t('s_lat')}</label><input type="number" id="sLat" value="${S.lat}" step="0.01" inputmode="decimal"></div>
   <div class="row"><label>${t('s_lon')}</label><input type="number" id="sLon" value="${S.lon}" step="0.01" inputmode="decimal"></div>
@@ -2289,9 +2289,9 @@ HDL.forEach(e=>{
     S.buildings.forEach(t2=>{if(t2.type==='own'&&b.type==='pod'){t2.y0=inFoot(b,t2.x,t2.z)?Math.round(b.fh*b.floors*10)/10:(t2.y0||0);}});rebuildAll();save();invalidate();renderPanel();};
   e.addEventListener('pointerup',end);e.addEventListener('pointercancel',end);});
 /* ======================= 🛰️ 在线卫星图（离线 / Railway 版）：自动比例、正北朝上 ======================= */
-Object.assign(I18N.zh,{st_sec:'🛰️ 在线卫星图（自动比例、正北朝上）',st_in:'贴 Google Maps 坐标或楼盘名字',st_ph:'例如 2.9935, 101.7870 或 Residensi Naluri',st_rng:'范围',st_go:'铺卫星图',st_h:'在 Google Maps 长按楼盘位置，最上面会出现坐标（像 2.99, 101.78），复制贴上来。也可以直接打楼盘名字。大小会自动对，不用标比例。',
+Object.assign(I18N.zh,{st_rh:'范围越大，下载越久，拉近看越模糊。看楼盘附近选 1–1.5 km；看地铁、商场、大路选 2–3 km。',st_sec:'🛰️ 在线卫星图（自动比例、正北朝上）',st_in:'贴 Google Maps 坐标或楼盘名字',st_ph:'例如 2.9935, 101.7870 或 Residensi Naluri',st_rng:'范围',st_go:'铺卫星图',st_h:'在 Google Maps 长按楼盘位置，最上面会出现坐标（像 2.99, 101.78），复制贴上来。也可以直接打楼盘名字。大小会自动对，不用标比例。',
  st_link:'Claude 链接版不能读在线地图（Claude 的安全规定）。请用离线 HTML 或 Railway 网址版，或者继续用截图。',st_load:'正在下载卫星图… {0}/{1}',st_ok:'卫星图铺好了：{0} 米范围，比例和正北已经对好',st_fail:'下载不到卫星图：{0}',st_nf:'找不到这个地方，试试贴坐标',st_bad:'看不懂这个位置，请贴坐标（例如 2.99, 101.78）',st_attr:'卫星图 © Esri, Maxar, Earthstar Geographics'});
-Object.assign(I18N.en,{st_sec:'🛰️ Online satellite map (auto scale, north up)',st_in:'Paste Google Maps coordinates or the project name',st_ph:'e.g. 2.9935, 101.7870 or Residensi Naluri',st_rng:'Area',st_go:'Load satellite map',st_h:'In Google Maps, long-press the site; the coordinates (like 2.99, 101.78) appear at the top — copy and paste them here. You can also type the project name. Scale is set automatically.',
+Object.assign(I18N.en,{st_rh:'Bigger areas take longer and look blurrier up close. 1–1.5 km for the project, 2–3 km for nearby stations and malls.',st_sec:'🛰️ Online satellite map (auto scale, north up)',st_in:'Paste Google Maps coordinates or the project name',st_ph:'e.g. 2.9935, 101.7870 or Residensi Naluri',st_rng:'Area',st_go:'Load satellite map',st_h:'In Google Maps, long-press the site; the coordinates (like 2.99, 101.78) appear at the top — copy and paste them here. You can also type the project name. Scale is set automatically.',
  st_link:'The Claude link version cannot load online maps (Claude security rules). Use the offline HTML or the Railway address, or keep using screenshots.',st_load:'Downloading satellite map… {0}/{1}',st_ok:'Satellite map ready: {0} m across, scale and north already set',st_fail:'Could not download the satellite map: {0}',st_nf:'Place not found — try coordinates',st_bad:'Could not read that location — paste coordinates (e.g. 2.99, 101.78)',st_attr:'Imagery © Esri, Maxar, Earthstar Geographics'});
 Object.assign(I18N.ms,{st_sec:'🛰️ Peta satelit dalam talian (skala auto, utara ke atas)',st_in:'Tampal koordinat Google Maps atau nama projek',st_ph:'cth. 2.9935, 101.7870 atau Residensi Naluri',st_rng:'Kawasan',st_go:'Muat peta satelit',st_h:'Dalam Google Maps, tekan lama pada tapak; koordinat (seperti 2.99, 101.78) muncul di atas — salin dan tampal di sini. Boleh juga taip nama projek. Skala ditetapkan sendiri.',
  st_link:'Versi pautan Claude tidak boleh memuat peta dalam talian (peraturan keselamatan Claude). Guna HTML luar talian atau alamat Railway, atau terus guna tangkapan skrin.',st_load:'Memuat turun peta satelit… {0}/{1}',st_ok:'Peta satelit sedia: {0} m, skala dan utara sudah ditetapkan',st_fail:'Tidak dapat memuat turun peta satelit: {0}',st_nf:'Tempat tidak dijumpai — cuba koordinat',st_bad:'Tidak faham lokasi itu — tampal koordinat (cth. 2.99, 101.78)',st_attr:'Imejan © Esri, Maxar, Earthstar Geographics'});
@@ -2299,15 +2299,15 @@ const IN_CLAUDE=(()=>{try{return /claude(usercontent)?\.(ai|com)$/i.test(locatio
 let satRange=+(localStorage.getItem('prop3d-satr')||600)||600;
 function satHTML(){return `<div class="sec"><b>${t('st_sec')}</b>${IN_CLAUDE?`<p class="hint" style="color:#b45309">${t('st_link')}</p>`:''}
   <div class="row"><input type="text" id="stQ" placeholder="${t('st_ph')}" style="flex:1" value="${esc(S.satQ||'')}"></div>
-  <div class="row"><label>${t('st_rng')}</label><select id="stR">${[300,600,1000,1500].map(v=>`<option value="${v}"${v===satRange?' selected':''}>${v} m</option>`).join('')}</select><button class="pri" id="stGo">${t('st_go')}</button></div>
+  <div class="row"><label>${t('st_rng')}</label><select id="stR">${[300,600,1000,1500,2000,2500,3000,4000,5000,8000,10000].map(v=>`<option value="${v}"${v===satRange?' selected':''}>${v>=1000?v/1000+' km':v+' m'}</option>`).join('')}</select><button class="pri" id="stGo">${t('st_go')}</button></div><div class="hint" style="margin:0 0 6px">${t('st_rh')}</div>
   <p class="hint">${t('st_h')}</p><p class="hint" style="font-size:11px">${t('st_attr')}</p></div>`;}
 function parseLatLon(q){q=String(q||'').trim();let m=q.match(/@(-?\d+\.\d+),\s*(-?\d+\.\d+)/)||q.match(/[?&](?:q|ll|query)=(-?\d+\.\d+),\s*(-?\d+\.\d+)/)||q.match(/(-?\d{1,2}\.\d+)\s*[,，\s]\s*(-?\d{2,3}\.\d+)/);
   if(m){const la=+m[1],lo=+m[2];if(Math.abs(la)<=85&&Math.abs(lo)<=180)return [la,lo];}return null;}
 async function geocode(q){const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=my&q='+encodeURIComponent(q),{headers:{'Accept':'application/json'}});const j=await r.json();if(!j||!j.length)return null;return [+j[0].lat,+j[0].lon];}
 function loadTile(z,x,y){return new Promise((res)=>{const im=new Image();im.crossOrigin='anonymous';im.onload=()=>res(im);im.onerror=()=>res(null);im.src=`https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`;});}
-async function loadSatellite(){const q=$('stQ').value.trim();satRange=+$('stR').value||600;try{localStorage.setItem('prop3d-satr',String(satRange));}catch(e){}S.satQ=q;
+async function loadSatellite(){const q=$('stQ').value.trim();satRange=Math.max(200,Math.min(10000,+$('stR').value||600));try{localStorage.setItem('prop3d-satr',String(satRange));}catch(e){}S.satQ=q;
   let ll=parseLatLon(q);if(!ll&&q){try{ll=await geocode(q);}catch(e){ll=null;}if(!ll){toast(t('st_nf'));return;}}if(!ll){toast(t('st_bad'));return;}
-  const [lat,lon]=ll,z=satRange<=700?19:18,n=Math.pow(2,z),mpp=156543.03392*Math.cos(lat*Math.PI/180)/n;
+  const [lat,lon]=ll;let z=19;while(z>12&&satRange/(156543.03392*Math.cos(lat*Math.PI/180)/Math.pow(2,z))>4096)z--;const n=Math.pow(2,z),mpp=156543.03392*Math.cos(lat*Math.PI/180)/n;
   const gx=(lon+180)/360*256*n,sl=Math.sin(lat*Math.PI/180),gy=(0.5-Math.log((1+sl)/(1-sl))/(4*Math.PI))*256*n;
   const N=Math.min(4096,Math.round(satRange/mpp)),x0=gx-N/2,y0=gy-N/2,tx0=Math.floor(x0/256),ty0=Math.floor(y0/256),tx1=Math.floor((x0+N)/256),ty1=Math.floor((y0+N)/256);
   const c=document.createElement('canvas');c.width=N;c.height=N;const g=c.getContext('2d');g.fillStyle='#777';g.fillRect(0,0,N,N);
@@ -2316,7 +2316,7 @@ async function loadSatellite(){const q=$('stQ').value.trim();satRange=+$('stR').
   const run=async([tx,ty])=>{const im=await loadTile(z,tx,ty);done++;if(im){okN++;g.drawImage(im,Math.round(tx*256-x0),Math.round(ty*256-y0));}if(done%6===0)toast(t('st_load',done,jobs.length));};
   const Q=jobs.slice();await Promise.all(Array.from({length:6},async()=>{while(Q.length)await run(Q.shift());}));
   if(!okN){toast(t('st_fail',IN_CLAUDE?t('st_link'):'network'));return;}
-  let data;try{const sc=Math.min(1,2048/N);if(sc<1){const c2=document.createElement('canvas');c2.width=Math.round(N*sc);c2.height=Math.round(N*sc);c2.getContext('2d').drawImage(c,0,0,c2.width,c2.height);data=c2.toDataURL('image/jpeg',0.86);}else data=c.toDataURL('image/jpeg',0.86);}
+  let data;try{const sc=Math.min(1,(satRange>1500?4096:2048)/N);if(sc<1){const c2=document.createElement('canvas');c2.width=Math.round(N*sc);c2.height=Math.round(N*sc);c2.getContext('2d').drawImage(c,0,0,c2.width,c2.height);data=c2.toDataURL('image/jpeg',0.86);}else data=c.toDataURL('image/jpeg',0.86);}
   catch(e){toast(t('st_fail','CORS'));return;}
   pushUndo(true);IMG=data;S.imgAspect=1;S.baseW=Math.round(N*mpp*10)/10;S.calibrated=true;S.northSet=true;S.north=0;S.lat=Math.round(lat*1e4)/1e4;S.lon=Math.round(lon*1e4)/1e4;S.city='custom';S.imgSrc='esri';
   try{localStorage.setItem(KEYIMG,IMG);}catch(e){toast(t('t_img_big'));}
@@ -3280,7 +3280,7 @@ function fxWindSpawn(p,G,T,mh,any){const u=upwind(),d=[-u[0],-u[2]],s=[-d[1],d[0
     p.x=d[0]*b+s[0]*a;p.z=d[1]*b+s[1]*a;p.y=1.5+Math.pow(Math.random(),1.6)*Math.max(20,mh*0.9);if(!fxHit(p.x,p.y,p.z,T))break;}
   p.tr=[];p.life=0;p.w=0.6+Math.random()*0.9;}
 function fxWind(dt,tm){const x=FX.x,G=fxGrid(),T=fxTops(),mh=T.reduce((m,o)=>Math.max(m,o.h),0),u=upwind(),d=[-u[0],-u[2]],s=[-d[1],d[0]];
-  const N=Math.round(Math.min(260,Math.max(120,W*H/5200)));while(FX.parts.length<N){const p={};fxWindSpawn(p,G,T,mh,true);FX.parts.push(p);}
+  const N=Math.round(Math.min(IS_TOUCH?170:260,Math.max(100,W*H/(IS_TOUCH?7000:5200))));while(FX.parts.length<N){const p={};fxWindSpawn(p,G,T,mh,true);FX.parts.push(p);}
   FX.parts.length=N;const R=Math.hypot(G.Wd,G.Hd)/2,sp=Math.max(G.Wd,G.Hd)/7;
   x.lineCap='round';
   for(const p of FX.parts){const e=fxGv(G,p.x,p.z),v=sp*(0.25+0.85*e)*p.w,sway=Math.sin(tm/700+p.w*9+p.y*0.07)*0.25;
@@ -3322,7 +3322,8 @@ function fxSun(dt,tm){if(!SUN||SUN.alt<=0)return;const x=FX.x,v=SUN.v,bb=bbox(),
   /* 整体暖色光 */if(sp){const g=x.createRadialGradient(sp[0],sp[1],0,sp[0],sp[1],Math.hypot(W,H));g.addColorStop(0,`rgba(255,200,120,${0.10*tw})`);g.addColorStop(1,'rgba(255,200,120,0)');x.fillStyle=g;x.fillRect(0,0,W,H);}
   x.globalCompositeOperation='source-over';}
 function fxFrame(tm){FX.raf=0;if(!fxOn()||!VP){if(FX.c){FX.c.style.display='none';}FX.parts=[];FX.rays=[];setTimeout(()=>{if(!FX.raf)FX.raf=requestAnimationFrame(fxFrame);},400);return;}
-  fxEnsure();const c=FX.c,dp=Math.min(2,window.devicePixelRatio||1);if(c.width!==Math.round(W*dp)||c.height!==Math.round(H*dp)){c.width=Math.round(W*dp);c.height=Math.round(H*dp);}
+  if(IS_TOUCH&&FX.last&&tm-FX.last<30){FX.raf=requestAnimationFrame(fxFrame);return;}
+  fxEnsure();const c=FX.c,dp=IS_TOUCH?1:Math.min(2,window.devicePixelRatio||1);if(c.width!==Math.round(W*dp)||c.height!==Math.round(H*dp)){c.width=Math.round(W*dp);c.height=Math.round(H*dp);}
   c.style.display='block';const x=FX.x;x.setTransform(dp,0,0,dp,0,0);x.clearRect(0,0,W,H);const dt=Math.min(0.05,FX.last?(tm-FX.last)/1000:0.016);FX.last=tm;
   try{if(S.mode==='wind')fxWind(dt,tm);else fxSun(dt,tm);}catch(e){}
   FX.raf=requestAnimationFrame(fxFrame);}
@@ -3575,35 +3576,49 @@ async function grRoute(){const q=($('grQ')&&$('grQ').value.trim())||'';if(!q){to
 const _loadSatellite=loadSatellite;loadSatellite=async function(){const q=$('stQ')?$('stQ').value.trim():'';let ll=parseLatLon(q);const r=await _loadSatellite.apply(this,arguments);
   try{if(S.imgSrc==='esri'){if(!ll&&q){ll=await geocode(q).catch(()=>null);}if(ll){S.satLL=ll;save();}}}catch(e){}return r;};
 /* ======================= 🌏 Google 真 3D 地图里模拟开车到公寓（需要 Google Maps Demo Key，只在 HTML 档案版） ======================= */
-Object.assign(I18N.zh,{g3_t:'🌏 Google 真 3D 地图模拟开车',g3_key:'Google 地图钥匙',g3_kph:'贴上 Maps Demo Key（AIza…）',g3_get:'免费拿钥匙',g3_go:'🌏 在 Google 3D 开过去',g3_h:'钥匙只存在这台设备。用 Gmail 到 developers.google.com/maps/demo-key 按 Get a Demo Key，免费、不用信用卡，每天有用量上限。',
- g3_nokey:'先贴上 Google 地图钥匙',g3_claude:'Claude 链接版不能放 Google 地图，请用 HTML 档案版',g3_load:'正在打开 Google 3D 地图…',g3_fail:'Google 地图打不开：{0}。请检查钥匙对不对、网络、或今天用量是否满了。',g3_exit:'✕ 退出',g3_dest:'🏢 {0}',g3_info:'{0} km · 约 {1} 分钟',g3_nodest:'不知道公寓位置：请先用地址或坐标下载卫星地图'});
-Object.assign(I18N.en,{g3_t:'🌏 Drive in Google photorealistic 3D',g3_key:'Google Maps key',g3_kph:'Paste your Maps Demo Key (AIza…)',g3_get:'Get a free key',g3_go:'🌏 Drive in Google 3D',g3_h:'The key stays on this device. With a Gmail account go to developers.google.com/maps/demo-key and tap Get a Demo Key — free, no credit card, daily limit.',
+Object.assign(I18N.zh,{g3_from:'从',g3_to:'到',g3_oph:'起点，例如 Batu 9 Cheras 或坐标',g3_dl:'公寓',g3_dph:'公寓地址或坐标（必填）',g3_dph2:'公寓（空着 = 用地图上的公寓位置）',g3_dnf:'找不到公寓地址，试试贴 Google 地图坐标',g3_s1:'① 正在打开 Google 地图…',g3_s2:'② 正在找地址…',g3_s3:'③ 正在找开车的路…',g3_t:'🌏 Google 真 3D 地图模拟开车',g3_key:'Google 地图钥匙',g3_kph:'贴上 Maps Demo Key（AIza…）',g3_get:'免费拿钥匙',g3_go:'🌏 在 Google 3D 开过去',g3_h:'钥匙只存在这台设备。用 Gmail 到 developers.google.com/maps/demo-key 按 Get a Demo Key，免费、不用信用卡，每天有用量上限。',
+ g3_nokey:'先贴上 Google 地图钥匙',g3_claude:'你现在用的是 Claude 链接版，这里放不进 Google 地图。请打开我发的 HTML 档案（Prop3D-新版-含AIKey.html）再按。',g3_load:'正在打开 Google 3D 地图…',g3_fail:'Google 地图打不开：{0}。请检查钥匙对不对、网络、或今天用量是否满了。',g3_exit:'✕ 退出',g3_dest:'🏢 {0}',g3_info:'{0} km · 约 {1} 分钟',g3_nodest:'不知道公寓在哪里：请在「公寓」那格写公寓地址，或贴 Google 地图坐标'});
+Object.assign(I18N.en,{g3_from:'From',g3_to:'To',g3_oph:'Start, e.g. Batu 9 Cheras or coordinates',g3_dl:'Condo',g3_dph:'Condo address or coordinates (required)',g3_dph2:'Empty = condo position on the map',g3_dnf:'Condo address not found — try Google Maps coordinates',g3_s1:'① Opening Google Maps…',g3_s2:'② Finding addresses…',g3_s3:'③ Finding the driving route…',g3_t:'🌏 Drive in Google photorealistic 3D',g3_key:'Google Maps key',g3_kph:'Paste your Maps Demo Key (AIza…)',g3_get:'Get a free key',g3_go:'🌏 Drive in Google 3D',g3_h:'The key stays on this device. With a Gmail account go to developers.google.com/maps/demo-key and tap Get a Demo Key — free, no credit card, daily limit.',
  g3_nokey:'Paste a Google Maps key first',g3_claude:'The Claude link version cannot show Google Maps; use the HTML file version',g3_load:'Opening Google 3D map…',g3_fail:'Google Maps did not open: {0}. Check the key, the network, or today\'s limit.',g3_exit:'✕ Exit',g3_dest:'🏢 {0}',g3_info:'{0} km · about {1} min',g3_nodest:'Condo location unknown: load the satellite map by address or coordinates first'});
-Object.assign(I18N.ms,{g3_t:'🌏 Memandu dalam 3D Google',g3_key:'Kunci Google Maps',g3_kph:'Tampal Maps Demo Key (AIza…)',g3_get:'Dapatkan kunci percuma',g3_go:'🌏 Pandu dalam Google 3D',g3_h:'Kunci disimpan pada peranti ini sahaja. Dapatkan di developers.google.com/maps/demo-key — percuma, tanpa kad kredit.',
+Object.assign(I18N.ms,{g3_from:'Dari',g3_to:'Ke',g3_oph:'Mula, cth. Batu 9 Cheras',g3_dl:'Kondo',g3_dph:'Alamat atau koordinat kondo',g3_dph2:'Kosong = lokasi kondo pada peta',g3_dnf:'Alamat kondo tidak dijumpai',g3_s1:'① Membuka Google Maps…',g3_s2:'② Mencari alamat…',g3_s3:'③ Mencari laluan…',g3_t:'🌏 Memandu dalam 3D Google',g3_key:'Kunci Google Maps',g3_kph:'Tampal Maps Demo Key (AIza…)',g3_get:'Dapatkan kunci percuma',g3_go:'🌏 Pandu dalam Google 3D',g3_h:'Kunci disimpan pada peranti ini sahaja. Dapatkan di developers.google.com/maps/demo-key — percuma, tanpa kad kredit.',
  g3_nokey:'Tampal kunci Google Maps dahulu',g3_claude:'Versi pautan Claude tidak boleh papar Google Maps',g3_load:'Membuka peta 3D Google…',g3_fail:'Google Maps gagal dibuka: {0}',g3_exit:'✕ Keluar',g3_dest:'🏢 {0}',g3_info:'{0} km · kira-kira {1} min',g3_nodest:'Lokasi kondo tidak diketahui'});
 function g3Key(){try{return localStorage.getItem('prop3d-gmkey')||'';}catch(e){return '';}}
-function g3HTML(){return `<details ${g3Key()?'':'open'} style="margin-top:6px;border:2px solid #2563eb;border-radius:12px;padding:6px 8px;background:#eff6ff"><summary style="font-weight:800;cursor:pointer">${t('g3_t')}</summary>
+function g3HTML(){return `<details open style="margin-top:6px;border:2px solid #2563eb;border-radius:12px;padding:6px 8px;background:#eff6ff"><summary style="font-weight:800;cursor:pointer">${t('g3_t')}</summary>
   <div class="crow" style="margin-top:6px"><span>${t('g3_key')}</span><input type="password" id="g3K" value="${esc(g3Key())}" placeholder="${t('g3_kph')}" autocomplete="off" style="flex:1;min-width:150px;padding:6px 8px">
    <a href="https://developers.google.com/maps/demo-key" target="_blank" rel="noopener" style="font-weight:700;color:#2563eb">${t('g3_get')}</a></div>
-  <div class="crow"><button class="pri" id="g3Go" style="background:#2563eb;border-color:#2563eb">${t('g3_go')}</button></div>
+  <div class="crow"><span style="font-weight:800;min-width:30px">${t('g3_from')}</span><input type="text" id="g3O" value="${esc(S.grQ||'')}" placeholder="${t('g3_oph')}" style="flex:1;min-width:150px;padding:6px 8px"></div>
+  <div class="crow"><span style="font-weight:800;min-width:30px">${t('g3_to')}</span><input type="text" id="g3D" value="${esc(S.g3D||'')}" placeholder="${grDest()?t('g3_dph2'):t('g3_dph')}" style="flex:1;min-width:150px;padding:6px 8px"></div>
+  <div class="crow"><button class="pri" id="g3Go" style="background:#2563eb;border-color:#2563eb">${G3MODES[g3Mode()]} ${t('g3_go2')}</button></div><div id="g3M" style="display:none;font-weight:700;margin:4px 0"></div>
   <div class="chint">${IN_CLAUDE?`<span style="color:#b45309">${t('g3_claude')}</span><br>`:''}${t('g3_h')}</div></details>`;}
 const _grHTML=grHTML;grHTML=function(){return _grHTML.apply(this,arguments)+g3HTML();};
-panel.addEventListener('change',e=>{if(e.target.id==='g3K'){try{localStorage.setItem('prop3d-gmkey',e.target.value.trim());}catch(_){}}});
+panel.addEventListener('input',e=>{if(e.target.id==='g3O'||e.target.id==='grQ'){S.grQ=e.target.value;const o=$(e.target.id==='g3O'?'grQ':'g3O');if(o)o.value=e.target.value;}});
+panel.addEventListener('change',e=>{if(e.target.id==='g3D'){S.g3D=e.target.value.trim();save();}if(e.target.id==='g3K'){try{localStorage.setItem('prop3d-gmkey',e.target.value.trim());}catch(_){}}});
 panel.addEventListener('click',e=>{if(e.target.closest('#g3Go'))g3Start();});
 let G3=null,G3LIB=null;
 function g3Load(key){if(G3LIB)return G3LIB;G3LIB=new Promise((res,rej)=>{window.__g3cb=()=>{try{google.maps.importLibrary('maps3d').then(res,rej);}catch(e){rej(e);}};
-  window.gm_authFailure=()=>{rej(new Error('key'));const m=G3&&G3.msg;if(m)m.textContent=t('g3_fail','API key');};
+  window.gm_authFailure=()=>{rej(new Error('key'));const tx=t('g3_fail','钥匙不对 / API key rejected');const m=G3&&G3.msg;if(m){m.textContent=tx;m.style.color='#fca5a5';m.style.fontSize='18px';}g3Msg(tx,1);};
   const s=document.createElement('script');s.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=weekly&loading=async&callback=__g3cb`;s.async=true;s.onerror=()=>rej(new Error('network'));document.head.appendChild(s);
   setTimeout(()=>rej(new Error('timeout')),20000);});G3LIB.catch(()=>{G3LIB=null;});return G3LIB;}
 function g3Brg(a,b){const y=Math.sin((b.lng-a.lng)*Math.PI/180)*Math.cos(b.lat*Math.PI/180),x=Math.cos(a.lat*Math.PI/180)*Math.sin(b.lat*Math.PI/180)-Math.sin(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.cos((b.lng-a.lng)*Math.PI/180);return (Math.atan2(y,x)*180/Math.PI+360)%360;}
 function g3Dist(a,b){const R=6371000,dl=(b.lat-a.lat)*Math.PI/180,dn=(b.lng-a.lng)*Math.PI/180,s=Math.sin(dl/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(s));}
-async function g3Start(){const key=($('g3K')&&$('g3K').value.trim())||g3Key();if(!key){toast(t('g3_nokey'));return;}try{localStorage.setItem('prop3d-gmkey',key);}catch(e){}
-  if(IN_CLAUDE){toast(t('g3_claude'));return;}const q=($('grQ')&&$('grQ').value.trim())||S.grQ||'';if(!q){toast(t('gr_need'));return;}S.grQ=q;save();
-  const d=grDest();if(!d){toast(t('g3_nodest'));return;}toast(t('g3_load'));
-  let a=parseLatLon(q);if(!a){try{a=await geocode(q);}catch(e){a=null;}}if(!a){toast(t('gr_nf'));return;}
-  let path=null,dist=0,dur=0;try{const r=await fetch(`https://router.project-osrm.org/route/v1/driving/${a[1]},${a[0]};${d[1]},${d[0]}?overview=full&geometries=geojson`);const j=await r.json();const rt=j.routes&&j.routes[0];if(rt){path=rt.geometry.coordinates.map(c=>({lat:c[1],lng:c[0]}));dist=rt.distance;dur=rt.duration;}}catch(e){}
-  if(!path||path.length<2){toast(t('gr_nr'));return;}path.push({lat:d[0],lng:d[1]});
-  let lib;try{lib=await g3Load(key);}catch(e){toast(t('g3_fail',e.message||e));return;}g3Open(lib,path,dist,dur);}
+function g3Msg(txt,bad){const m=$('g3M');if(m){m.textContent=txt;m.style.color=bad?'#b91c1c':'#1e40af';m.style.display=txt?'block':'none';}if(txt)toast(txt);}
+async function g3Geo(q,lib){let a=parseLatLon(q);if(a)return a;try{a=await geocode(q);}catch(e){a=null;}if(a)return a;
+  try{const {Place}=await google.maps.importLibrary('places');const r=await Place.searchByText({textQuery:q+' Malaysia',fields:['location'],maxResultCount:1});const l=r&&r.places&&r.places[0]&&r.places[0].location;if(l)return [l.lat(),l.lng()];}catch(e){}
+  try{const {Geocoder}=await google.maps.importLibrary('geocoding');const g=new Geocoder();const r=await g.geocode({address:q,region:'my'});const l=r.results&&r.results[0]&&r.results[0].geometry.location;if(l)return [l.lat(),l.lng()];}catch(e){}
+  return null;}
+async function g3Path(a,d){const md=g3Mode();try{const r=await fetch(md==='walk'?`https://routing.openstreetmap.de/routed-foot/route/v1/driving/${a[1]},${a[0]};${d[1]},${d[0]}?overview=full&geometries=geojson`:`https://router.project-osrm.org/route/v1/driving/${a[1]},${a[0]};${d[1]},${d[0]}?overview=full&geometries=geojson`);const j=await r.json();const rt=j.routes&&j.routes[0];if(rt)return {path:rt.geometry.coordinates.map(c=>({lat:c[1],lng:c[0]})),dist:rt.distance,dur:rt.duration};}catch(e){}
+  try{const {Route}=await google.maps.importLibrary('routes');const r=await Route.computeRoutes({origin:{lat:a[0],lng:a[1]},destination:{lat:d[0],lng:d[1]},travelMode:md==='walk'?'WALKING':md==='moto'?'TWO_WHEELER':'DRIVING',fields:['path','distanceMeters','durationMillis']});const rt=r&&r.routes&&r.routes[0];
+    if(rt&&rt.path&&rt.path.length)return {path:rt.path.map(p=>({lat:typeof p.lat==='function'?p.lat():p.lat,lng:typeof p.lng==='function'?p.lng():p.lng})),dist:rt.distanceMeters||0,dur:(rt.durationMillis||0)/1000};}catch(e){}
+  try{const ds=new google.maps.DirectionsService();const r=await ds.route({origin:{lat:a[0],lng:a[1]},destination:{lat:d[0],lng:d[1]},travelMode:md==='walk'?'WALKING':'DRIVING'});const rt=r.routes[0];return {path:rt.overview_path.map(p=>({lat:p.lat(),lng:p.lng()})),dist:rt.legs[0].distance.value,dur:rt.legs[0].duration.value};}catch(e){}
+  return null;}
+async function g3Start(){const key=($('g3K')&&$('g3K').value.trim())||g3Key();if(!key){g3Msg(t('g3_nokey'),1);return;}try{localStorage.setItem('prop3d-gmkey',key);}catch(e){}
+  if(IN_CLAUDE){g3Msg(t('g3_claude'),1);return;}const q=($('g3O')&&$('g3O').value.trim())||($('grQ')&&$('grQ').value.trim())||S.grQ||'';if(!q){g3Msg(t('gr_need'),1);return;}S.grQ=q;
+  const dq=($('g3D')&&$('g3D').value.trim())||'';S.g3D=dq;save();
+  g3Msg(t('g3_s1'));let lib;try{lib=await g3Load(key);}catch(e){g3Msg(t('g3_fail',e.message||e),1);return;}
+  g3Msg(t('g3_s2'));let d=dq?await g3Geo(dq,lib):grDest();if(!d){g3Msg(dq?t('g3_dnf'):t('g3_nodest'),1);return;}
+  const a=await g3Geo(q,lib);if(!a){g3Msg(t('gr_nf'),1);return;}
+  g3Msg(t('g3_s3'));const r=await g3Path(a,d);if(!r||r.path.length<2){g3Msg(t('gr_nr'),1);return;}r.path.push({lat:d[0],lng:d[1]});
+  g3Msg('');g3Remember(q,dq,r);g3Open(lib,r.path,r.dist,r.dur);}
 function g3Open(lib,path,dist,dur){g3Close();const {Map3DElement,Marker3DElement,Polyline3DElement}=lib;
   const box=document.createElement('div');box.id='g3Box';box.style.cssText='position:fixed;inset:0;z-index:150;background:#000';document.body.appendChild(box);
   const cum=[0];for(let i=1;i<path.length;i++)cum.push(cum[i-1]+g3Dist(path[i-1],path[i]));const L=cum[cum.length-1];
@@ -3612,25 +3627,109 @@ function g3Open(lib,path,dist,dur){g3Close();const {Map3DElement,Marker3DElement
   map.style.cssText='position:absolute;inset:0;width:100%;height:100%';box.appendChild(map);
   try{const pl=new Polyline3DElement({strokeColor:'#2563ebdd',outerColor:'#ffffff',outerWidth:0.3,strokeWidth:12,altitudeMode:'CLAMP_TO_GROUND',drawsOccludedSegments:true});try{pl.path=path;}catch(e){}try{if(!pl.path||!pl.path.length)pl.coordinates=path;}catch(e){}map.append(pl);}catch(e){}
   const dEnd=path[path.length-1];try{const dm=new Marker3DElement({position:{lat:dEnd.lat,lng:dEnd.lng,altitude:70},altitudeMode:'RELATIVE_TO_GROUND',extruded:true,label:t('g3_dest',curProj().name)});map.append(dm);}catch(e){}
-  let car=null;try{car=new Marker3DElement({position:{lat:path[0].lat,lng:path[0].lng,altitude:8},altitudeMode:'RELATIVE_TO_GROUND',extruded:true,label:'🚗'});map.append(car);}catch(e){}
+  let car=null;try{car=new Marker3DElement({position:{lat:path[0].lat,lng:path[0].lng,altitude:2},altitudeMode:'RELATIVE_TO_GROUND'});const tp=document.createElement('template');tp.content.append(g3CarEl());car.append(tp);map.append(car);}catch(e){try{car=new Marker3DElement({position:{lat:path[0].lat,lng:path[0].lng,altitude:8},altitudeMode:'RELATIVE_TO_GROUND',extruded:true,label:'🚗'});map.append(car);}catch(_){}}
   const bar=document.createElement('div');bar.style.cssText='position:absolute;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top) + 8px) 10px 8px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:linear-gradient(#000a,#0000);color:#fff;font-weight:700;z-index:2';
   bar.innerHTML=`<span style="font-size:16px">🚗 ${esc(S.grQ||'')} → ${esc(curProj().name)}</span><span style="opacity:.85">${t('g3_info',(dist/1000).toFixed(1),Math.round(dur/60))}</span><span style="flex:1"></span>
+   ${Object.keys(G3V).map(k=>`<button data-g3v="${k}" style="padding:6px 10px;border-radius:10px;border:0;${(S.g3View||'chase')===k?'background:#2563eb;color:#fff':''}">${t('g3v_'+k)}</button>`).join('')}
+   <button data-g3z="0.7" style="padding:6px 10px;border-radius:10px;border:0">＋</button><button data-g3z="1.4" style="padding:6px 10px;border-radius:10px;border:0">－</button>
    <button id="g3P" style="font-size:16px;padding:6px 14px;border-radius:10px;border:0">⏸</button>${[1,2,4,8].map(v=>`<button data-g3s="${v}" style="padding:6px 10px;border-radius:10px;border:0">${v}×</button>`).join('')}
    <button id="g3X" style="padding:6px 12px;border-radius:10px;border:0;background:#dc2626;color:#fff">${t('g3_exit')}</button>`;box.appendChild(bar);
   const msg=document.createElement('div');msg.style.cssText='position:absolute;left:12px;bottom:calc(env(safe-area-inset-bottom) + 12px);right:12px;color:#fff;font-weight:700;text-shadow:0 1px 4px #000;z-index:2';box.appendChild(msg);
   const rng=document.createElement('input');rng.type='range';rng.min=0;rng.max=1000;rng.value=0;rng.style.cssText='position:absolute;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom) + 36px);width:calc(100% - 24px);z-index:2';box.appendChild(rng);
-  G3={box,map,car,path,cum,L,s:0,play:true,mult:1,v:Math.max(14,L/75),hd:g3Brg(path[0],path[1]),last:0,raf:0,msg,rng};
-  bar.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.id==='g3X')g3Close();else if(b.id==='g3P'){G3.play=!G3.play;b.textContent=G3.play?'⏸':'▶';}else if(b.dataset.g3s){G3.mult=+b.dataset.g3s;}});
+  G3={box,map,car,path,cum,L,s:0,play:true,mult:1,view:S.g3View||'chase',zoom:1,v:g3Mode()==='walk'?Math.max(2.5,L/75):Math.max(14,L/75),hd:g3Brg(path[0],path[1]),last:0,raf:0,msg,rng};
+  bar.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.id==='g3X')g3Close();else if(b.id==='g3P'){G3.play=!G3.play;b.textContent=G3.play?'⏸':'▶';}else if(b.dataset.g3s){G3.mult=+b.dataset.g3s;}else if(b.dataset.g3v){G3.view=b.dataset.g3v;G3.zoom=1;S.g3View=G3.view;save();bar.querySelectorAll('[data-g3v]').forEach(x=>{const on=x.dataset.g3v===G3.view;x.style.background=on?'#2563eb':'';x.style.color=on?'#fff':'';});}else if(b.dataset.g3z){G3.zoom=Math.max(0.25,Math.min(6,G3.zoom*+b.dataset.g3z));}});
   rng.addEventListener('input',()=>{G3.s=G3.L*rng.value/1000;});
   G3.raf=requestAnimationFrame(g3Frame);}
 function g3At(s){const G=G3,c=G.cum;let i=1;while(i<c.length-1&&c[i]<s)i++;const a=G.path[i-1],b=G.path[i],f=c[i]>c[i-1]?(s-c[i-1])/(c[i]-c[i-1]):0;return {p:{lat:a.lat+(b.lat-a.lat)*f,lng:a.lng+(b.lng-a.lng)*f},i};}
 function g3Frame(tm){const G=G3;if(!G)return;const dt=Math.min(0.1,G.last?(tm-G.last)/1000:0.016);G.last=tm;
   if(G.play&&G.s<G.L){G.s=Math.min(G.L,G.s+G.v*G.mult*dt);}
   const {p}=g3At(G.s),ah=g3At(Math.min(G.L,G.s+40)).p;let want=g3Dist(p,ah)>2?g3Brg(p,ah):G.hd;let dh=((want-G.hd+540)%360)-180;G.hd=(G.hd+dh*Math.min(1,dt*2.2)+360)%360;
-  try{if(G.car)G.car.position={lat:p.lat,lng:p.lng,altitude:8};G.map.center={lat:p.lat,lng:p.lng,altitude:0};G.map.heading=G.hd;if(G.s>=G.L){G.map.range=Math.min(600,(G.map.range||260)+dt*60);}}catch(e){}
+  try{if(G.car)G.car.position={lat:p.lat,lng:p.lng,altitude:2};G.map.center={lat:p.lat,lng:p.lng,altitude:0};const V=G3V[G.view]||G3V.chase;G.map.heading=V.north?0:G.hd;G.map.tilt=V.tilt;G.map.range=V.range*G.zoom;}catch(e){}
   G.rng.value=Math.round(G.s/G.L*1000);G.msg.textContent=`${(G.s/1000).toFixed(2)} / ${(G.L/1000).toFixed(2)} km`;
   G.raf=requestAnimationFrame(g3Frame);}
+const G3V={chase:{tilt:67,range:260},bird:{tilt:45,range:700},top:{tilt:0,range:900,north:true}};
 function g3Close(){if(!G3)return;cancelAnimationFrame(G3.raf);try{G3.box.remove();}catch(e){}G3=null;}
+
+/* 开过的路线自动存起来，下次一按就开 */
+function g3Routes(){if(!Array.isArray(S.g3Routes))S.g3Routes=[];return S.g3Routes;}
+function g3Remember(from,to,r){const L=g3Routes();const P=[];r.path.forEach(p=>{const l=P[P.length-1];if(!l||g3Dist({lat:l[0],lng:l[1]},p)>5)P.push([Math.round(p.lat*1e5)/1e5,Math.round(p.lng*1e5)/1e5]);});
+  const k=(from+'|'+to+'|'+g3Mode()).toLowerCase(),i=L.findIndex(x=>(x.from+'|'+x.to+'|'+(x.mode||'car')).toLowerCase()===k);const o={from,to,path:P,dist:r.dist,dur:r.dur,at:Date.now(),mode:g3Mode()};if(i>=0)L.splice(i,1);L.unshift(o);if(L.length>12)L.length=12;save();}
+async function g3Play(i){const o=g3Routes()[i];if(!o)return;const key=g3Key();if(!key){g3Msg(t('g3_nokey'),1);return;}if(IN_CLAUDE){g3Msg(t('g3_claude'),1);return;}
+  g3Msg(t('g3_s1'));let lib;try{lib=await g3Load(key);}catch(e){g3Msg(t('g3_fail',e.message||e),1);return;}g3Msg('');S.grQ=o.from;if(o.mode)S.g3Mode=o.mode;
+  const pth=o.path.map(p=>({lat:p[0],lng:p[1]}));const to=o.to;const nm=curProj().name;g3Open(lib,pth,o.dist,o.dur);}
+const _g3HTML=g3HTML;g3HTML=function(){const h=_g3HTML.apply(this,arguments),L=g3Routes();if(!L.length)return h;
+  const list=`<div style="margin-top:6px"><b>⭐ ${t('g3_saved')}</b>${L.map((o,i)=>`<div class="crow" style="margin-top:4px"><button class="pri" data-g3p="${i}" style="background:#2563eb;border-color:#2563eb">▶</button><span style="flex:1;font-size:14px">${G3MODES[o.mode||'car']} ${esc(o.from)} → ${esc(o.to||curProj().name)} <span class="hint" style="margin:0">${(o.dist/1000).toFixed(1)} km</span></span><button data-g3del="${i}">🗑</button></div>`).join('')}</div>`;
+  const i=h.lastIndexOf('</details>');return h.slice(0,i)+list+h.slice(i);};
+panel.addEventListener('click',e=>{const b=e.target.closest('[data-g3p],[data-g3del]');if(!b)return;if(b.dataset.g3p!==undefined)g3Play(+b.dataset.g3p);else{g3Routes().splice(+b.dataset.g3del,1);save();renderPanel();}});
+Object.assign(I18N.zh,{g3_saved:'开过的路线（下次直接按 ▶）'});Object.assign(I18N.en,{g3_saved:'Saved routes (tap ▶ to drive again)'});Object.assign(I18N.ms,{g3_saved:'Laluan tersimpan (tekan ▶)'});
+
+/* 🚗 选车：车（从后面看）+ 上面一个定位针；也可以放自己的车照片 */
+window.__car=(t,c)=>g3CarSVG(t,c);
+const G3CARS={sedan:'轿车',suv:'SUV',mpv:'MPV',sport:'跑车'};const G3COL=['#dc2626','#f8fafc','#111827','#2563eb','#9ca3af','#f59e0b'];
+function g3CarSVG(tp,col){const dark=['#111827','#2563eb','#dc2626'].includes(col);const gl='#1e293b',rim='#cbd5e1';
+  const S={sedan:{w:84,h:30,rt:22,rw:58,ry:12},suv:{w:88,h:38,rt:26,rw:66,ry:8},mpv:{w:86,h:42,rt:30,rw:68,ry:6},sport:{w:92,h:24,rt:16,rw:52,ry:16}}[tp]||{w:84,h:30,rt:22,rw:58,ry:12};
+  const W=120,cx=60,by=150,top=by-S.h-S.rt;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="176" viewBox="0 0 ${W} 176">
+  <g transform="translate(${cx},10)"><path d="M0,58 C-6,40 -22,34 -22,18 A22,22 0 1 1 22,18 C22,34 6,40 0,58Z" fill="#e11d48" stroke="#fff" stroke-width="3"/><circle cx="0" cy="18" r="8" fill="#fff"/></g>
+  <ellipse cx="${cx}" cy="${by+14}" rx="${S.w/2+6}" ry="7" fill="#0006"/>
+  <rect x="${cx-S.w/2+6}" y="${by-4}" width="16" height="20" rx="4" fill="#111"/><rect x="${cx+S.w/2-22}" y="${by-4}" width="16" height="20" rx="4" fill="#111"/>
+  <path d="M${cx-S.rw/2},${top+S.rt} L${cx-S.rw/2+S.ry},${top} L${cx+S.rw/2-S.ry},${top} L${cx+S.rw/2},${top+S.rt}Z" fill="${col}" stroke="#0005" stroke-width="1.5"/>
+  <path d="M${cx-S.rw/2+5},${top+S.rt-2} L${cx-S.rw/2+S.ry+3},${top+4} L${cx+S.rw/2-S.ry-3},${top+4} L${cx+S.rw/2-5},${top+S.rt-2}Z" fill="${gl}" opacity=".85"/>
+  <rect x="${cx-S.w/2}" y="${top+S.rt}" width="${S.w}" height="${S.h}" rx="9" fill="${col}" stroke="#0005" stroke-width="1.5"/>
+  <rect x="${cx-S.w/2+4}" y="${top+S.rt+6}" width="18" height="8" rx="3" fill="#ef4444" stroke="#7f1d1d"/><rect x="${cx+S.w/2-22}" y="${top+S.rt+6}" width="18" height="8" rx="3" fill="#ef4444" stroke="#7f1d1d"/>
+  <rect x="${cx-15}" y="${top+S.rt+S.h-15}" width="30" height="9" rx="2" fill="#fef9c3" stroke="#0006"/>
+  <rect x="${cx-S.w/2-1}" y="${by-6}" width="${S.w+2}" height="6" rx="3" fill="${dark?'#0b0f19':'#374151'}"/>
+  <line x1="${cx-S.w/2+8}" y1="${top+S.rt+3}" x2="${cx+S.w/2-8}" y2="${top+S.rt+3}" stroke="${rim}" stroke-width="1" opacity=".6"/></svg>`;}
+function g3CarEl(){const c=S.g3Car||{t:'sedan',c:'#dc2626'};const md=g3Mode();if(md!=='car'){const d=document.createElement('div');d.innerHTML=md==='walk'?g3WalkSVG(c.c):g3MotoSVG(c.c);return d.firstElementChild;}
+  if(c.img){const d=document.createElement('div');d.innerHTML=`<svg xmlns="http://www.w3.org/2000/svg" width="120" height="176" viewBox="0 0 120 176"><g transform="translate(60,10)"><path d="M0,58 C-6,40 -22,34 -22,18 A22,22 0 1 1 22,18 C22,34 6,40 0,58Z" fill="#e11d48" stroke="#fff" stroke-width="3"/><circle cx="0" cy="18" r="8" fill="#fff"/></g><ellipse cx="60" cy="164" rx="50" ry="7" fill="#0006"/><image href="${c.img}" x="4" y="72" width="112" height="96" preserveAspectRatio="xMidYMax meet"/></svg>`;return d.firstElementChild;}
+  const d=document.createElement('div');d.innerHTML=g3CarSVG(c.t,c.c);return d.firstElementChild;}
+const G3MODES={walk:'🚶',car:'🚗',moto:'🏍'};
+function g3Mode(){return S.g3Mode&&G3MODES[S.g3Mode]?S.g3Mode:'car';}
+(function(){const st=document.createElement('style');st.textContent='#panel button:active{transform:scale(.94);filter:brightness(.9)}';document.head.appendChild(st);})();
+const SELB='background:#dc2626;color:#fff;border:2px solid #dc2626;box-shadow:0 0 0 3px #fecaca';
+function g3CarHTML(){const c=S.g3Car||{t:'sedan',c:'#dc2626'},md=g3Mode();const prev=s=>'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(s);
+  const look=md==='walk'?t('g3_walker'):md==='moto'?t('g3_ct_moto'):(c.img?t('g3_own'):t('g3_ct_'+c.t));
+  return `<div class="crow" style="margin-top:6px"><b>${t('g3_mode')}</b>${Object.keys(G3MODES).map(k=>`<button data-g3m="${k}" style="padding:7px 12px;border-radius:10px;font-weight:700;${md===k?SELB:''}">${G3MODES[k]} ${t('g3m_'+k)}${md===k?' ✓':''}</button>`).join('')}</div>
+  <details style="margin-top:4px"><summary style="cursor:pointer;font-weight:700">🎨 ${t('g3_look')}：${look} <span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${c.c};vertical-align:middle;border:1px solid #0004"></span></summary>
+  ${md==='car'?`<div class="crow" style="margin-top:4px">${Object.keys(G3CARS).map(k=>`<button data-g3ct="${k}" style="padding:2px 4px;border-radius:10px;${!c.img&&c.t===k?SELB:''}"><img src="${prev(g3CarSVG(k,c.c||'#dc2626'))}" style="height:52px;display:block"><span style="font-size:11px">${t('g3_ct_'+k)}${!c.img&&c.t===k?' ✓':''}</span></button>`).join('')}
+   <button id="g3CarUp" style="border-radius:10px;${c.img?SELB:''}">${c.img?`<img src="${c.img}" style="height:40px;display:block">`:''}📷 ${t('g3_own')}${c.img?' ✓':''}</button></div>`:`<div class="crow" style="margin-top:4px"><img src="${prev(md==='walk'?g3WalkSVG(c.c):g3MotoSVG(c.c))}" style="height:60px"></div>`}
+  <div class="crow">${G3COL.map(x=>`<button data-g3cc="${x}" style="width:34px;height:34px;padding:0;border-radius:50%;background:${x};${!c.img&&c.c===x?'border:3px solid #dc2626;box-shadow:0 0 0 3px #fecaca':'border:1px solid #0004'}">${!c.img&&c.c===x?'<b style="color:'+(x==='#f8fafc'?'#111':'#fff')+'">✓</b>':''}</button>`).join('')}</div></details>`;}
+const PINSVG='<g transform="translate(60,10)"><path d="M0,58 C-6,40 -22,34 -22,18 A22,22 0 1 1 22,18 C22,34 6,40 0,58Z" fill="#e11d48" stroke="#fff" stroke-width="3"/><circle cx="0" cy="18" r="8" fill="#fff"/></g>';
+function g3WalkSVG(col){return `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="176" viewBox="0 0 120 176">${PINSVG}<ellipse cx="60" cy="166" rx="22" ry="6" fill="#0006"/>
+  <circle cx="60" cy="86" r="11" fill="#f1c27d" stroke="#0005"/><path d="M50,84 Q60,70 70,84 Q66,78 60,78 Q54,78 50,84Z" fill="#1f2937"/>
+  <rect x="45" y="98" width="30" height="36" rx="9" fill="${col}" stroke="#0005"/><rect x="38" y="100" width="8" height="28" rx="4" fill="${col}" stroke="#0005"/><rect x="74" y="100" width="8" height="28" rx="4" fill="${col}" stroke="#0005"/>
+  <rect x="48" y="132" width="10" height="30" rx="4" fill="#1e3a8a"/><rect x="62" y="132" width="10" height="30" rx="4" fill="#1e3a8a"/></svg>`;}
+function g3MotoSVG(col){return `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="176" viewBox="0 0 120 176">${PINSVG}<ellipse cx="60" cy="166" rx="26" ry="6" fill="#0006"/>
+  <rect x="53" y="138" width="14" height="28" rx="6" fill="#111"/><rect x="34" y="104" width="52" height="6" rx="3" fill="#374151"/>
+  <circle cx="60" cy="84" r="12" fill="${col}" stroke="#0006"/><rect x="51" y="84" width="18" height="6" rx="2" fill="#1e293b"/>
+  <rect x="47" y="96" width="26" height="26" rx="8" fill="#1f2937"/><rect x="44" y="118" width="32" height="24" rx="7" fill="${col}" stroke="#0006"/>
+  <rect x="52" y="124" width="16" height="7" rx="2" fill="#ef4444" stroke="#7f1d1d"/><rect x="55" y="134" width="10" height="5" fill="#fef9c3"/></svg>`;}
+const _g3HTML2=g3HTML;g3HTML=function(){const h=_g3HTML2.apply(this,arguments);const i=h.indexOf('<div class="crow"><button class="pri" id="g3Go"');return i>0?h.slice(0,i)+g3CarHTML()+h.slice(i):h;};
+panel.addEventListener('click',e=>{const b=e.target.closest('[data-g3m]');if(!b)return;S.g3Mode=b.dataset.g3m;save();renderPanel();});
+panel.addEventListener('click',async e=>{const b=e.target.closest('[data-g3ct],[data-g3cc],#g3CarUp');if(!b)return;const c=Object.assign({t:'sedan',c:'#dc2626'},S.g3Car||{});
+  if(b.dataset.g3ct){c.t=b.dataset.g3ct;delete c.img;}else if(b.dataset.g3cc){c.c=b.dataset.g3cc;delete c.img;}
+  else{const f=await txPick('image/*');if(!f)return;const url=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(f);});
+    const im=await new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=url;});if(!im)return;const sc=Math.min(1,260/Math.max(im.width,im.height)),cv2=document.createElement('canvas');cv2.width=Math.round(im.width*sc);cv2.height=Math.round(im.height*sc);cv2.getContext('2d').drawImage(im,0,0,cv2.width,cv2.height);c.img=cv2.toDataURL('image/png');}
+  S.g3Car=c;save();renderPanel();const dd=document.querySelector('#panel details summary [style*="border-radius:50%"]');const de=dd&&dd.closest('details');if(de)de.open=true;});
+Object.assign(I18N.zh,{g3_mode:'怎样去：',g3m_walk:'走路',g3m_car:'开车',g3m_moto:'摩托',g3_look:'样子',g3_walker:'走路的人',g3_ct_moto:'摩托',g3_go2:'在 Google 3D 出发',g3v_chase:'🚗 跟车 3D',g3v_bird:'🦅 鸟瞰',g3v_top:'🗺 2D 上面看',g3_car:'选车（车上面有定位针）',g3_own:'放自己的车照片',g3_ct_sedan:'轿车',g3_ct_suv:'SUV',g3_ct_mpv:'MPV',g3_ct_sport:'跑车'});
+Object.assign(I18N.en,{g3_mode:'Go by:',g3m_walk:'Walk',g3m_car:'Car',g3m_moto:'Motorbike',g3_look:'Look',g3_walker:'Walker',g3_ct_moto:'Motorbike',g3_go2:'Go in Google 3D',g3v_chase:'🚗 Chase 3D',g3v_bird:'🦅 Bird view',g3v_top:'🗺 2D top',g3_car:'Choose the car (pin above it)',g3_own:'Use my car photo',g3_ct_sedan:'Sedan',g3_ct_suv:'SUV',g3_ct_mpv:'MPV',g3_ct_sport:'Sports'});
+Object.assign(I18N.ms,{g3_mode:'Cara pergi:',g3m_walk:'Jalan kaki',g3m_car:'Kereta',g3m_moto:'Motosikal',g3_look:'Rupa',g3_walker:'Pejalan kaki',g3_ct_moto:'Motosikal',g3_go2:'Pergi dalam Google 3D',g3v_chase:'🚗 Ikut 3D',g3v_bird:'🦅 Pandangan burung',g3v_top:'🗺 2D atas',g3_car:'Pilih kereta (pin di atas)',g3_own:'Guna foto kereta saya',g3_ct_sedan:'Sedan',g3_ct_suv:'SUV',g3_ct_mpv:'MPV',g3_ct_sport:'Sport'});
+/* ======================= 📂 收起来：每个区块按标题才打开，不会一大堆摆在外面 ======================= */
+let FOLD={};try{FOLD=JSON.parse(localStorage.getItem('prop3d-fold')||'{}')||{};}catch(e){FOLD={};}
+function foldSave(){try{localStorage.setItem('prop3d-fold',JSON.stringify(FOLD));}catch(e){}}
+(function(){const st=document.createElement('style');st.textContent=`#panel .sec.fold>b:first-child{display:flex;align-items:center;gap:6px;cursor:pointer;padding:6px 0;user-select:none}
+#panel .sec.fold>b:first-child::after{content:'▾';margin-left:auto;font-size:18px;color:#1e6b57;transition:transform .15s}
+#panel .sec.fold.shut>b:first-child::after{transform:rotate(-90deg)}
+#panel .sec.fold.shut>*:not(:first-child){display:none!important}
+#panel details>summary{padding:4px 0}`;document.head.appendChild(st);})();
+function foldKey(el){return (panelMode||'')+':'+(el.textContent||'').replace(/\s+/g,' ').trim().slice(0,24);}
+function foldApply(){const P=$('panel');if(!P)return;let first=true;const cmp=P.classList.contains('compact');
+  if(!cmp)P.querySelectorAll('.sec').forEach(sec=>{const b=sec.firstElementChild;if(!b||b.tagName!=='B'||sec.children.length<2){return;}
+    const k=foldKey(b);sec.classList.add('fold');const open=k in FOLD?FOLD[k]:first;first=false;sec.classList.toggle('shut',!open);
+    if(!b._fold){b._fold=1;b.addEventListener('click',e=>{e.stopPropagation();const sh=!sec.classList.contains('shut');sec.classList.toggle('shut',sh);FOLD[k]=!sh;foldSave();});}});
+  P.querySelectorAll('details').forEach(d=>{const s=d.querySelector('summary');if(!s)return;const k='d:'+foldKey(s);if(k in FOLD)d.open=FOLD[k];else if(d.closest('#panel')&&/🗺|🌏/.test(s.textContent))d.open=false;
+    if(!d._fold){d._fold=1;d.addEventListener('toggle',()=>{FOLD[k]=d.open;foldSave();});}});}
+const _renderPanelF=renderPanel;renderPanel=function(){const r=_renderPanelF.apply(this,arguments);try{foldApply();}catch(e){}return r;};
 /* ======================= 🎬 展示录成视频，可以下载 / 分享 ======================= */
 Object.assign(I18N.zh,{rc_btn:'⏺ 录成视频',rc_on:'● 录影中…',rc_ready:'🎬 视频好了',rc_dl:'⬇ 下载视频',rc_share:'📤 分享（WhatsApp 等）',rc_close:'关闭',rc_no:'这个浏览器不能录视频，请用 Chrome 或新版 Safari',rc_h:'如果按「下载」没反应（Claude 链接版有时会挡），请用「分享」，或用离线 HTML / Railway 版。',rc_size:'{0} MB · {1} 秒'});
 Object.assign(I18N.en,{rc_btn:'⏺ Record video',rc_on:'● Recording…',rc_ready:'🎬 Video ready',rc_dl:'⬇ Download video',rc_share:'📤 Share (WhatsApp etc.)',rc_close:'Close',rc_no:'This browser cannot record video — use Chrome or a recent Safari',rc_h:'If Download does nothing (the Claude link sometimes blocks it), use Share, or the offline HTML / Railway version.',rc_size:'{0} MB · {1} s'});
