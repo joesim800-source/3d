@@ -766,7 +766,7 @@ function quad(a,p0,p1,p2,p3,n,c,uv){const u=uv||[[0,0],[0,0],[0,0],[0,0]];const 
 function texFrom(src){const tx=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,tx);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,src);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);return tx;}
 const white=(()=>{const tx=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,tx);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([255,255,255,255]));return tx;})();
-const APP_VER='版本 2026-11-24h';const IS_TOUCH=('ontouchstart' in window)||navigator.maxTouchPoints>0;const SMS=IS_TOUCH?1024:2048;const smTex=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,smTex);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,SMS,SMS,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
+const APP_VER='版本 2026-11-24i';const IS_TOUCH=('ontouchstart' in window)||navigator.maxTouchPoints>0;const SMS=IS_TOUCH?1024:2048;const smTex=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,smTex);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,SMS,SMS,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
 gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
 const smFB=gl.createFramebuffer(),smRB=gl.createRenderbuffer();gl.bindFramebuffer(gl.FRAMEBUFFER,smFB);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,smTex,0);
 gl.bindRenderbuffer(gl.RENDERBUFFER,smRB);gl.renderbufferStorage(gl.RENDERBUFFER,gl.DEPTH_COMPONENT16,SMS,SMS);gl.framebufferRenderbuffer(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.RENDERBUFFER,smRB);gl.bindFramebuffer(gl.FRAMEBUFFER,null);
@@ -3764,7 +3764,7 @@ function fmTexU(s){const k='u:'+s;if(FMT.has(k))return FMT.get(k);const c=docume
   const o={tx:texFrom(c),a:c.width/c.height};FMT.set(k,o);return o;}
 function fmUnitB(b){const old=FMU.get(b.id);if(old)old.forEach(o=>freeMesh(o.m));FMU.delete(b.id);
   if(b.type!=='own'||S.unitNo===false||!Array.isArray(b.cells)||!b.cells.length)return;
-  const parts=b.parts&&b.parts.length?b.parts:[{x0:-0.5,x1:0.5,z0:-0.5,z1:0.5}],inP=(x,z)=>parts.some(q=>x>q.x0-1e-4&&x<q.x1+1e-4&&z>q.z0-1e-4&&z<q.z1+1e-4);
+  const allR=b.cells.flatMap(c=>c.rs&&c.rs.length?c.rs:[c]),inP=(x,z)=>allR.some(q=>x>q.x0-1e-4&&x<q.x1+1e-4&&z>q.z0-1e-4&&z<q.z1+1e-4);
   const W=b.w,D=b.d,rr=rad(b.rot||0),yTop=(b.y0||0)+b.fh*b.floors,out=[];
   b.cells.forEach(cl=>{if(cl.core||cl.cor)return;const lab=String(cl.label||'').trim();if(!lab)return;const rs=cl.rs&&cl.rs.length?cl.rs:[cl];const T=fmTexU(lab),edges=[];
     rs.forEach(r=>{const e=0.004;[['x0',-1,0],['x1',1,0],['z0',0,-1],['z1',0,1]].forEach(([k,nx,nz])=>{let cx,cz,len;
@@ -3774,8 +3774,9 @@ function fmUnitB(b){const old=FMU.get(b.id);if(old)old.forEach(o=>freeMesh(o.m))
     const arr=[];use.forEach(ed=>{let h=b.fh*0.48,w=h*T.a;if(w>ed.len*0.85){w=ed.len*0.85;h=w/T.a;}const off=0.14,rt=[ed.nz,-ed.nx],y=yTop-h/2-0.12;
       const P=(su,sv)=>{const lx=ed.cx+ed.nx*off+rt[0]*su*w/2,lz=ed.cz+ed.nz*off+rt[1]*su*w/2,q=rotY(lx,lz,rr);return [b.x+q[0],y+sv*h/2,b.z+q[1]];};const n=rotY(ed.nx,ed.nz,rr);
       quad(arr,P(-1,1),P(-1,-1),P(1,-1),P(1,1),[n[0],0,n[1]],[1,1,1,1],[[0,0],[0,1],[1,1],[1,0]]);});
-    out.push({m:mesh(arr),tx:T.tx});});
+    out.push({m:mesh(arr),tx:T.tx,lab,faces:use.map(e=>e.nx+','+e.nz)});});
   FMU.set(b.id,out);}
+window.__fmu=id=>(FMU.get(id)||[]).map(o=>o.lab+'@'+o.faces.join('|'));
 const _fmBuildB=fmBuildB;fmBuildB=function(b){_fmBuildB(b);try{fmUnitB(b);}catch(e){}};
 const _fmDraw=fmDraw;fmDraw=function(){_fmDraw();if(S.unitNo===false||!FMU.size)return;gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
   for(const b of S.buildings){const L=FMU.get(b.id);if(!L)continue;const sy=groupsScale.get(b.id)??1;if(sy<0.999)continue;const cl=flvClip(b);for(const o of L)drawM(o.m,{tex:o.tx,unlit:true,clip:cl});}gl.disable(gl.BLEND);};
