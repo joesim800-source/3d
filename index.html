@@ -766,7 +766,7 @@ function quad(a,p0,p1,p2,p3,n,c,uv){const u=uv||[[0,0],[0,0],[0,0],[0,0]];const 
 function texFrom(src){const tx=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,tx);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,src);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);return tx;}
 const white=(()=>{const tx=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,tx);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([255,255,255,255]));return tx;})();
-const APP_VER='版本 2026-11-24c';const IS_TOUCH=('ontouchstart' in window)||navigator.maxTouchPoints>0;const SMS=IS_TOUCH?1024:2048;const smTex=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,smTex);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,SMS,SMS,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
+const APP_VER='版本 2026-11-24d';const IS_TOUCH=('ontouchstart' in window)||navigator.maxTouchPoints>0;const SMS=IS_TOUCH?1024:2048;const smTex=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,smTex);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,SMS,SMS,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
 gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
 const smFB=gl.createFramebuffer(),smRB=gl.createRenderbuffer();gl.bindFramebuffer(gl.FRAMEBUFFER,smFB);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,smTex,0);
 gl.bindRenderbuffer(gl.RENDERBUFFER,smRB);gl.renderbufferStorage(gl.RENDERBUFFER,gl.DEPTH_COMPONENT16,SMS,SMS);gl.framebufferRenderbuffer(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.RENDERBUFFER,smRB);gl.bindFramebuffer(gl.FRAMEBUFFER,null);
@@ -3211,7 +3211,7 @@ Object.assign(I18N.en,{lk_on:'🔒 Locked',lk_off:'🔓 Lock',lk_msg:'Project is
 Object.assign(I18N.ms,{lk_on:'🔒 Dikunci',lk_off:'🔓 Kunci',lk_msg:'Projek dikunci (lihat sahaja). Ketik 🔒 Dikunci di kiri atas untuk buka.',lk_did:'Dikunci: boleh lihat dan pusing pandangan, tiada yang bergerak',lk_undid:'Dibuka — boleh ubah semula',lk_ro:'Projek dikunci — lihat sahaja.'});
 const LK_PX=new Set(['bAI','xDraw','xPlans','xItems','xPlace','xPaint','bSet','xNote','xDrive','xTx','xRoads','xColors','xKey','bTrace','bAddOwn','bAddNb','bAddRoad']);
 const LK_ID=new Set(['bAI','bUndo','bUndo2','bTrace','bAddOwn','bAddNb','bAddRoad','bPlace','pDup','pDel','pdAdd','pdAll','pdDel','plDone']);
-function lkSet(on){S.locked=!!on;save();document.body.classList.toggle('locked',S.locked);if(S.locked){if(PLACE||panelMode==='place'||panelMode==='paint'||panelMode==='items'||panelMode==='note'||panelMode==='txpl'){panelMode=null;}try{endTools();}catch(_){}
+function lkSet(on){S.locked=!!on;S.lkMig=1;save();document.body.classList.toggle('locked',S.locked);if(S.locked){if(PLACE||panelMode==='place'||panelMode==='paint'||panelMode==='items'||panelMode==='note'||panelMode==='txpl'){panelMode=null;}try{endTools();}catch(_){}
     const dm=$('drawM');if(dm)dm.classList.remove('show');try{dwPeekHide();}catch(_){}renderPanel();toast(t('lk_did'));}else toast(t('lk_undid'));try{lyUI();}catch(_){}}
 document.addEventListener('click',e=>{if(!S.locked)return;const b=e.target.closest('button,[data-px]');if(!b)return;const px=b.dataset&&b.dataset.px;
   if((px&&LK_PX.has(px))||LK_ID.has(b.id)||(b.closest('#panel')&&panelMode==='b'&&b.dataset&&b.dataset.st)){e.stopPropagation();e.preventDefault();toast(t('lk_msg'));}},true);
@@ -3377,24 +3377,23 @@ function bkHTML(){return `<div class="sec"><b>${t('bk_t')}</b><p class="hint">${
 const _projHTML=projHTML;projHTML=function(){return _projHTML.apply(this,arguments)+bkHTML();};
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('#bkSave,#bkLoad,#bkGo');if(!b)return;if(b.id==='bkSave')bkSave();if(b.id==='bkLoad')bkLoad();if(b.id==='bkGo')bkApply();});
 /* ======================= 💾 一键储存项目 ======================= */
-Object.assign(I18N.zh,{sv_b:'💾 储存',sv_ok:'✅ 已储存「{0}」{1}，已锁定不会被改到',sv_cloud:'（云端 + 这台）',sv_local:'（存在这台设备）',sv_when:'💾 已储存 {0}',sv_unsaved:'有改动还没储存',sv_off:'⚠ 这个 HTML 档案版只能存在这台 iPad。换新版档案前，请到「我的项目」按「存成档案」。'});
-Object.assign(I18N.en,{sv_b:'💾 Save',sv_ok:'✅ Saved "{0}" {1} and locked so it cannot change by accident',sv_cloud:'(cloud + this device)',sv_local:'(on this device)',sv_when:'💾 Saved {0}',sv_unsaved:'Changes not saved yet',sv_off:'⚠ This HTML file version saves only on this iPad. Before opening a new version, tap "Save backup file" in My projects.'});
-Object.assign(I18N.ms,{sv_b:'💾 Simpan',sv_ok:'✅ "{0}" disimpan {1} dan dikunci',sv_cloud:'(awan + peranti ini)',sv_local:'(pada peranti ini)',sv_when:'💾 Disimpan {0}',sv_unsaved:'Ada perubahan belum disimpan',sv_off:'⚠ Versi fail HTML ini hanya simpan pada iPad ini. Sebelum buka versi baharu, tekan "Simpan fail sandaran" dalam Projek saya.'});
+Object.assign(I18N.zh,{sv_b:'💾 储存',sv_ok:'✅ 已储存「{0}」{1}，还可以继续改',sv_cloud:'（云端 + 这台）',sv_local:'（存在这台设备）',sv_when:'💾 已储存 {0}',sv_unsaved:'有改动还没储存',sv_off:'⚠ 这个 HTML 档案版只能存在这台 iPad。换新版档案前，请到「我的项目」按「存成档案」。'});
+Object.assign(I18N.en,{sv_b:'💾 Save',sv_ok:'✅ Saved "{0}" {1} — you can keep editing',sv_cloud:'(cloud + this device)',sv_local:'(on this device)',sv_when:'💾 Saved {0}',sv_unsaved:'Changes not saved yet',sv_off:'⚠ This HTML file version saves only on this iPad. Before opening a new version, tap "Save backup file" in My projects.'});
+Object.assign(I18N.ms,{sv_b:'💾 Simpan',sv_ok:'✅ "{0}" disimpan {1}',sv_cloud:'(awan + peranti ini)',sv_local:'(pada peranti ini)',sv_when:'💾 Disimpan {0}',sv_unsaved:'Ada perubahan belum disimpan',sv_off:'⚠ Versi fail HTML ini hanya simpan pada iPad ini. Sebelum buka versi baharu, tekan "Simpan fail sandaran" dalam Projek saya.'});
 (function(){const b=document.createElement('button');b.id='bSave';b.className='pri';b.textContent=t('sv_b');const r=$('bReport2');r.parentNode.insertBefore(b,r);
   const st=document.createElement('style');st.textContent='#bSave{background:#b45309!important;border-color:#b45309!important;color:#fff!important}#bSave.done{background:#1e6b57!important;border-color:#1e6b57!important}';document.head.appendChild(st);})();
-let SV_BUSY=false;
+let SV_BUSY=false,SV_DIRTY=true;const _saveSV=save;save=function(){if(!SV_BUSY){SV_DIRTY=true;const b=$('bSave');if(b&&b.classList.contains('done'))b.classList.remove('done');}return _saveSV.apply(this,arguments);};
 async function svSave(){if(SV_BUSY)return;SV_BUSY=true;try{
   try{if(DW&&$('drawM')&&$('drawM').classList.contains('show'))ddSave();}catch(e){}
   try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist();}catch(e){}
-  if(!S.locked)lkSet(true);
   const p=PROJ.find(p=>p.id===CUR);const now=Date.now();if(p){p.saved=now;p.upd=now;}else{PROJ.push({id:CUR,name:t('pj_def'),upd:now,saved:now});}
   S.savedAt=now;S.pjName=curProj().name;clearTimeout(saveT);try{localStorage.setItem(KEY,JSON.stringify(S));if(IMG)localStorage.setItem(KEYIMG,IMG);}catch(e){}
   projSave();let where=t('sv_local');
   let okL=false;try{okL=localStorage.getItem(KEY)===JSON.stringify(S);}catch(e){}if(!okL){toast(t(window.__kvFail?'sv_full':'sv_verify'));return;}
   if(CL.db){try{touchM();}catch(e){}await clUpload(false);if(CL.st==='ok')where=t('sv_cloud');else{toast(t('sv_cerr',CL.err||''));return;}}
-  toast(t('sv_ok',curProj().name,where));if(!CL.db)setTimeout(()=>toast(t('sv_off')),3200);
+  SV_DIRTY=false;toast(t('sv_ok',curProj().name,where));if(!CL.db)setTimeout(()=>toast(t('sv_off')),3200);
 }finally{SV_BUSY=false;svMark();}}
-function svMark(){const b=$('bSave');if(!b)return;b.textContent=t('sv_b');const saved=S.savedAt&&S.locked;b.classList.toggle('done',!!saved);b.title=saved?t('sv_when',fmtT(S.savedAt)):t('sv_unsaved');}
+function svMark(){const b=$('bSave');if(!b)return;b.textContent=t('sv_b');const saved=S.savedAt&&!SV_DIRTY;b.classList.toggle('done',!!saved);b.title=saved?t('sv_when',fmtT(S.savedAt)):t('sv_unsaved');}
 $('bSave').onclick=svSave;
 const _lkSet=lkSet;lkSet=function(on){_lkSet.apply(this,arguments);svMark();};
 const _applyStatic=applyStatic;applyStatic=function(){_applyStatic.apply(this,arguments);svMark();};
@@ -3403,8 +3402,9 @@ const _projHTML2=projHTML;projHTML=function(){let h=_projHTML2.apply(this,argume
 /* 还原档案：一步完成 */
 bkLoad=async function(){const f=await txPick('.json,application/json,text/plain');if(!f)return;let o;try{o=JSON.parse(await f.text());}catch(e){o=null;}
   if(!o||o.app!=='prop3d'||!o.ls){toast(t('bk_bad'));return;}BK_PEND=o;bkApply();};
-setTimeout(svMark,500);
-const _openProject=openProject;openProject=async function(){const r=await _openProject.apply(this,arguments);svMark();return r;};
+function svBoot(){if(S.savedAt&&S.locked&&!S.lkMig){S.lkMig=1;lkSet(false);}else if(!S.lkMig){S.lkMig=1;}SV_DIRTY=!S.savedAt;svMark();}
+setTimeout(svBoot,500);
+const _openProject=openProject;openProject=async function(){const r=await _openProject.apply(this,arguments);svBoot();return r;};
 
 /* 存不进去时一定要讲，不再静静失败 */
 let SVF_T=0;function svFail(e){if(Date.now()-SVF_T<8000)return;SVF_T=Date.now();toast(t('sv_full'));}
