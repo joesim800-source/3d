@@ -412,7 +412,7 @@ s_sun:'日照 / 西晒',s_win:'日照时段',s_to:'至',s_west:'西晒从几点�
 s_nw:'噪音 / 通风',s_roads:'道路管理（改等级 / 删除）',s_ntime:'噪声时段',s_wind:'主导风向',s_wind_h:'根据 MetMalaysia：东北季风约 11 月到 3 月，风从东北吹来；西南季风约 5 月到 9 月，风从西南吹来；4 月和 10 月是季风转换期，风向不定。',
 s_bak:'方案备份',s_exp:'复制方案代码',s_imp_ph:'在另一台设备上，把方案代码粘贴到这里',s_imp:'导入方案',s_bak_h:'方案代码不含底图图片，导入后需要重新选择底图。',s_demo:'载入示例',s_clear:'清空所有楼和路',s_clear2:'再点一次确认清空',
 t_copied_plan:'方案代码已复制',t_imported:'方案已导入',t_bad_plan:'方案代码不正确',t_cleared:'已清空，可以按「撤销」恢复',t_north0:'已设为正北朝上',t_img:'底图已导入，下一步：标定比例',t_img_big:'图片太大，没能存到本机，下次打开要重新选',t_add:'已添加 {0}，按住它拖到对应位置',t_addnb:'已添加周边建筑，拖到对应位置',t_pick:'先点选一栋楼，再在右边选楼层',t_copy_fail:'复制失败，请手动复制',
-vi_head:'{0} · {1} 层{2} · 朝{3}',vi_front:'正前方 {0} 米是 {1}（{2} 层，高约 {3} 米）',vi_clear:'正前方 300 米内没有遮挡',vi_open:'前方 ±60° 视野开阔度：<b>{0}%</b>（150 米内无遮挡的比例）',vi_drag:'按住屏幕拖动环顾四周',
+vi_head:'{0} · {1} 层{2} · 朝{3}',vi_front:'正前方 {0} 米是 {1}（{2} 层，高约 {3} 米）',vi_clear:'正前方 300 米内没有遮挡',vi_open:'前方 ±60° 视野开阔度：<b>{0}%</b>（150 米内无遮挡的比例）',vi_drag:'按住屏幕拖动环顾四周，两指捏合拉近 / 拉远',
 pres_t:'{0} · 共 {1} 栋',
 rep_none:'还没有本小区楼栋。',rep_calc:'计算中…',rep_copied:'表格已复制，可以粘贴到 Excel / Numbers',
 rs_head:'{0}（北纬 {1}°）· {2} · 马来西亚时间 {3}–{4} · 西晒从 {5}:00 算 · 按各户主窗中点计算（边间也算侧面窗），阳光与外墙夹角小于 15° 不算',
@@ -766,7 +766,7 @@ function quad(a,p0,p1,p2,p3,n,c,uv){const u=uv||[[0,0],[0,0],[0,0],[0,0]];const 
 function texFrom(src){const tx=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,tx);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,src);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);return tx;}
 const white=(()=>{const tx=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,tx);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([255,255,255,255]));return tx;})();
-const APP_VER='版本 2026-11-24i';const IS_TOUCH=('ontouchstart' in window)||navigator.maxTouchPoints>0;const SMS=IS_TOUCH?1024:2048;const smTex=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,smTex);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,SMS,SMS,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
+const APP_VER='版本 2026-11-25';const IS_TOUCH=('ontouchstart' in window)||navigator.maxTouchPoints>0;const SMS=IS_TOUCH?1024:2048;const smTex=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,smTex);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,SMS,SMS,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
 gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
 const smFB=gl.createFramebuffer(),smRB=gl.createRenderbuffer();gl.bindFramebuffer(gl.FRAMEBUFFER,smFB);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,smTex,0);
 gl.bindRenderbuffer(gl.RENDERBUFFER,smRB);gl.renderbufferStorage(gl.RENDERBUFFER,gl.DEPTH_COMPONENT16,SMS,SMS);gl.framebufferRenderbuffer(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.RENDERBUFFER,smRB);gl.bindFramebuffer(gl.FRAMEBUFFER,null);
@@ -1019,11 +1019,13 @@ const cam={t:[0,0,0],dist:430,yaw:-0.55,pitch:0.72,fov:45};
 let VP=null,camB=null,eyeNow=null,W=1,H=1,dpr=1;
 function camEye(){const cp=Math.cos(cam.pitch);return [cam.t[0]+cam.dist*cp*Math.sin(cam.yaw),cam.t[1]+cam.dist*Math.sin(cam.pitch),cam.t[2]+cam.dist*cp*Math.cos(cam.yaw)];}
 let VIEW=null,PRES=null,camAnim=null,LOCK=false,LAYER='sun';
+function camMax(){let g;try{g=gSize();}catch(e){g={w:1000,h:1000};}return Math.max(4000,Math.max(g.w,g.h)*1.8);}
+function farPlane(){let g;try{g=gSize();}catch(e){g={w:1000,h:1000};}return Math.max(8000,Math.max(g.w,g.h)*2.5+(VIEW?0:cam.dist*2));}
 function computeCam(){
   let e,c,near=1,fov=cam.fov;
   if(VIEW){e=[VIEW.eye.x,VIEW.eye.y,VIEW.eye.z];const cp=Math.cos(VIEW.pitch);c=vadd(e,[Math.sin(VIEW.yaw)*cp,Math.sin(VIEW.pitch),Math.cos(VIEW.yaw)*cp]);near=0.2;fov=VIEW.fov;}
   else{e=camEye();c=cam.t;near=Math.max(1,Math.min(40,cam.dist*0.02));}
-  const L=lookAt(e,c,[0,1,0]);camB={x:L.x,y:L.y,z:L.z,fov:rad(fov)};eyeNow=e;VP=mmul(persp(rad(fov),W/H,near,8000),L.m);
+  const L=lookAt(e,c,[0,1,0]);camB={x:L.x,y:L.y,z:L.z,fov:rad(fov)};eyeNow=e;VP=mmul(persp(rad(fov),W/H,near,farPlane()),L.m);
 }
 function rayFrom(cx,cy){const r=cv.getBoundingClientRect(),nx=(cx-r.left)/r.width*2-1,ny=-((cy-r.top)/r.height*2-1),th=Math.tan(camB.fov/2);
   const d=vnorm(vadd(vadd(vsc(camB.z,-1),vsc(camB.x,nx*th*W/H)),vsc(camB.y,ny*th)));return {o:eyeNow,d};}
@@ -1096,7 +1098,7 @@ cv.addEventListener('pointerdown',e=>{
   try{cv.setPointerCapture(e.pointerId);}catch(_){}
   ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});camAnim=null;
   if(PRES)return;
-  if(VIEW){VIEW.drag={x:e.clientX,y:e.clientY};return;}
+  if(VIEW){if(ptrs.size===2){VIEW.drag=null;VIEW.pin={d:twoInfo().d,f:VIEW.fov};return;}VIEW.drag={x:e.clientX,y:e.clientY};return;}
   if(placeDown(e))return;
   if(ptrs.size===2){down=null;drag=null;gest=twoInfo();return;}
   if(ptrs.size>2)return;
@@ -1111,8 +1113,8 @@ cv.addEventListener('pointermove',e=>{
   const p=ptrs.get(e.pointerId);if(!p)return;const dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;
   if(PRES)return;
   if(placeMove())return;
-  if(VIEW){if(VIEW.drag){VIEW.yaw-=dx*0.004;VIEW.pitch=Math.max(-1.2,Math.min(1.2,VIEW.pitch+dy*0.004));redraw();}return;}
-  if(ptrs.size===2&&gest){const n=twoInfo();cam.dist=Math.max(15,Math.min(4000,cam.dist*gest.d/n.d));pan(n.cx-gest.cx,n.cy-gest.cy);gest=n;redraw();return;}
+  if(VIEW){if(ptrs.size===2&&VIEW.pin){VIEW.fov=vFov(VIEW.pin.f*VIEW.pin.d/twoInfo().d);redraw();return;}if(VIEW.drag){const k=VIEW.fov/65;VIEW.yaw-=dx*0.004*k;VIEW.pitch=Math.max(-1.3,Math.min(1.3,VIEW.pitch+dy*0.004*k));redraw();}return;}
+  if(ptrs.size===2&&gest){const n=twoInfo();cam.dist=Math.max(15,Math.min(camMax(),cam.dist*gest.d/n.d));pan(n.cx-gest.cx,n.cy-gest.cy);gest=n;redraw();return;}
   if(ptrs.size!==1)return;
   if(down&&Math.hypot(e.clientX-down.x,e.clientY-down.y)<6&&!down.moving)return;
   if(down)down.moving=true;
@@ -1127,13 +1129,13 @@ function endPtr(e){
   if(ptrs.size<2)gest=null;
   if(placeEnd())return;
   if(PRES)return;
-  if(VIEW){VIEW.drag=null;return;}
+  if(VIEW){VIEW.drag=null;if(ptrs.size<2)VIEW.pin=null;return;}
   if(drag){const mv=drag.moved;drag=null;if(mv){save();invalidate();down=null;return;}}
   if(down&&!down.moving&&!PLACE&&Date.now()-down.t<700&&e.type==='pointerup')tap(e.clientX,e.clientY);
   if(ptrs.size===0)down=null;
 }
 cv.addEventListener('pointerup',endPtr);cv.addEventListener('pointercancel',endPtr);
-cv.addEventListener('wheel',e=>{e.preventDefault();if(VIEW){VIEW.fov=Math.max(20,Math.min(90,VIEW.fov+e.deltaY*0.05));redraw();return;}cam.dist=Math.max(15,Math.min(4000,cam.dist*Math.exp(e.deltaY*0.0015)));redraw();},{passive:false});
+cv.addEventListener('wheel',e=>{e.preventDefault();if(VIEW){VIEW.fov=vFov(VIEW.fov*Math.exp(e.deltaY*0.0015));redraw();return;}cam.dist=Math.max(15,Math.min(camMax(),cam.dist*Math.exp(e.deltaY*0.0015)));redraw();},{passive:false});
 function tap(x,y){
   const g=groundAt(x,y);
   if(drawRoad){if(g){drawRoad.pts.push([Math.round(g[0]*10)/10,Math.round(g[1]*10)/10]);buildRoads();renderPanel();}return;}
@@ -1441,8 +1443,9 @@ function enterView(b,floor,unit){if(PRES)return;let slots=slotsOf(b);if(b.type!=
   document.body.classList.add('viewing');$('viewbar').classList.add('show');placeView();}
 function exitView(){if(!VIEW)return;VIEW=null;document.body.classList.remove('viewing');$('viewbar').classList.remove('show');redraw();}
 $('vExit').onclick=exitView;
-$('vIn').onclick=()=>{if(VIEW){VIEW.fov=Math.max(20,VIEW.fov-10);redraw();}};
-$('vOut').onclick=()=>{if(VIEW){VIEW.fov=Math.min(90,VIEW.fov+10);redraw();}};
+function vFov(f){return Math.max(6,Math.min(115,f));}
+$('vIn').onclick=()=>{if(VIEW){VIEW.fov=vFov(VIEW.fov/1.35);redraw();}};
+$('vOut').onclick=()=>{if(VIEW){VIEW.fov=vFov(VIEW.fov*1.35);redraw();}};
 $('vUp').onclick=()=>{if(VIEW&&VIEW.floor<VIEW.b.floors){VIEW.floor++;placeView();}};
 $('vDown').onclick=()=>{if(VIEW&&VIEW.floor>1){VIEW.floor--;placeView();}};
 $('bView').onclick=()=>{const b=bById(selId);if(!b){toast(t('t_pick'));return;}panelMode='b';panelHidden=false;renderPanel();const el=$('pView');if(el)el.scrollIntoView({behavior:'smooth',block:'center'});};
@@ -2340,7 +2343,7 @@ setTimeout(satAttr,300);
   ball.addEventListener('pointermove',e=>{e.stopPropagation();move(e);});
   function end(e){if(!st||e.pointerId!==st.id)return;st=null;cancelAnimationFrame(raf);ball.classList.remove('on');knob.style.transform='';}
   ball.addEventListener('pointerup',end);ball.addEventListener('pointercancel',end);
-  const zoom=f=>{cam.dist=Math.max(15,Math.min(4000,cam.dist*f));camAnim=null;redraw();};
+  const zoom=f=>{cam.dist=Math.max(15,Math.min(camMax(),cam.dist*f));camAnim=null;redraw();};
   let zt=null;const hold=(btn,f)=>{btn.addEventListener('pointerdown',e=>{e.preventDefault();zoom(f);clearInterval(zt);zt=setInterval(()=>zoom(f),80);});['pointerup','pointercancel','pointerleave'].forEach(ev=>btn.addEventListener(ev,()=>clearInterval(zt)));};
   hold($('orbIn'),0.92);hold($('orbOut'),1/0.92);})();
 /* ======================= 📌 地图标注：标签 / 范围 / 线 / 箭头 ======================= */
