@@ -234,7 +234,7 @@ button{transition:background-color .12s,transform .08s}button:active{transform:s
 #bottom{background:rgba(255,255,255,.62)!important;border-top-color:rgba(255,255,255,.5)!important;padding-top:6px!important;padding-bottom:calc(env(safe-area-inset-bottom) + 6px)!important}
 body:not(.datesOpen) #dateRow{display:none!important}
 #bDates{padding:6px 10px;font-size:14px}
-.lab.fl{font-size:11px;padding:0 5px;background:#ffffffd9;color:#0f493b;font-weight:700;border-radius:6px;transform:translate(0,-50%)}
+.lab.fl{font-size:12px;padding:0 6px;background:#fff;color:#0f493b;font-weight:800;border-radius:6px;border:2px solid #1e6b57;transform:translate(0,-50%)}
 @media (max-width:720px){body.panelOpen #legend{display:none!important}}
 .hdl{position:fixed;z-index:7;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;background:#fff;border:3px solid #1e6b57;box-shadow:0 2px 8px #0005;touch-action:none;cursor:grab}
 .hdl::after{content:'';position:absolute;inset:-12px}
@@ -766,7 +766,7 @@ function quad(a,p0,p1,p2,p3,n,c,uv){const u=uv||[[0,0],[0,0],[0,0],[0,0]];const 
 function texFrom(src){const tx=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,tx);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,src);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);return tx;}
 const white=(()=>{const tx=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,tx);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([255,255,255,255]));return tx;})();
-const APP_VER='版本 2026-11-24';const IS_TOUCH=('ontouchstart' in window)||navigator.maxTouchPoints>0;const SMS=IS_TOUCH?1024:2048;const smTex=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,smTex);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,SMS,SMS,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
+const APP_VER='版本 2026-11-24b';const IS_TOUCH=('ontouchstart' in window)||navigator.maxTouchPoints>0;const SMS=IS_TOUCH?1024:2048;const smTex=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,smTex);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,SMS,SMS,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
 gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
 const smFB=gl.createFramebuffer(),smRB=gl.createRenderbuffer();gl.bindFramebuffer(gl.FRAMEBUFFER,smFB);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,smTex,0);
 gl.bindRenderbuffer(gl.RENDERBUFFER,smRB);gl.renderbufferStorage(gl.RENDERBUFFER,gl.DEPTH_COMPONENT16,SMS,SMS);gl.framebufferRenderbuffer(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.RENDERBUFFER,smRB);gl.bindFramebuffer(gl.FRAMEBUFFER,null);
@@ -2256,16 +2256,18 @@ panel.addEventListener('click',e=>{const tg=e.target.closest('button');if(!tg||p
 
 /* ======================= 每 10 层标号码 / 颜色输入 / 日期收起 ======================= */
 const flMap=new Map();
-function syncFloorMarks(){for(const [id,els] of flMap){if(!bById(id)||S.flMarks===false){els.forEach(e=>e.remove());flMap.delete(id);}}
-  if(S.flMarks===false)return;S.buildings.forEach(b=>{if(b.type!=='own')return;const want=Math.floor(b.floors/10);let els=flMap.get(b.id)||[];
+function fmOff(){return S.flMarks===false||(S.flMark&&S.flMark.on===false);}
+function syncFloorMarks(){for(const [id,els] of flMap){if(!bById(id)||fmOff()){els.forEach(e=>e.remove());flMap.delete(id);}}
+  if(fmOff())return;S.buildings.forEach(b=>{if(b.type!=='own')return;const EV=fmEvery();const want=Math.floor((b.floors-1)/EV);let els=flMap.get(b.id)||[];
     while(els.length>want)els.pop().remove();while(els.length<want){const e=document.createElement('div');e.className='lab fl';labelsEl.appendChild(e);els.push(e);}
-    els.forEach((e,i)=>{e.textContent=String((i+1)*10);});flMap.set(b.id,els);});}
-function placeFloorMarks(){if(S.flMarks===false)return;for(const [id,els] of flMap){const b=bById(id);if(!b)continue;const sy=groupsScale.get(b.id)??1;const c=rotY(b.w/2+1.2,-b.d/2,rad(b.rot));
-    els.forEach((e,i)=>{const p=sy<0.999?null:proj([b.x+c[0],(b.y0||0)+b.fh*(i+1)*10,b.z+c[1]]);if(p){e.style.display='';e.style.left=p[0]+'px';e.style.top=p[1]+'px';}else e.style.display='none';});}}
+    els.forEach((e,i)=>{e.textContent=String((i+1)*EV);e.style.borderColor=(S.flMark&&S.flMark.color)||'#1e6b57';});flMap.set(b.id,els);});}
+function placeFloorMarks(){if(fmOff())return;for(const [id,els] of flMap){const b=bById(id);if(!b)continue;const sy=groupsScale.get(b.id)??1;const c=rotY(b.w/2+1.2,-b.d/2,rad(b.rot));
+    els.forEach((e,i)=>{const p=sy<0.999?null:proj([b.x+c[0],(b.y0||0)+b.fh*((i+1)*fmEvery()+0.5),b.z+c[1]]);if(p){e.style.display='';e.style.left=p[0]+'px';e.style.top=p[1]+'px';}else e.style.display='none';});}}
 panel.addEventListener('input',e=>{const k=e.target.dataset&&e.target.dataset.fc;if(!k)return;S.facade=S.facade||{base:'#f2f2ee',stripes:[]};const v=e.target.value;
   if(k==='podium'||k==='shops'||k==='base')S.facade[k]=v;else if(k==='crown'&&S.facade.crown)S.facade.crown.color=v;else if(/^s\d+$/.test(k)&&S.facade.stripes[+k.slice(1)])S.facade.stripes[+k.slice(1)].color=v;
   paint();save();try{legend();}catch(_){}});
-function fmSet(k,v){S.flMark=Object.assign({on:true,every:10,color:'#1e6b57'},S.flMark||{});S.flMark[k]=v;paint();save();}
+function fmEvery(){const M=S.flMark||{every:10};return Math.max(2,Math.min(50,Math.round(+M.every||10)));}
+function fmSet(k,v){S.flMark=Object.assign({on:true,every:10,color:'#1e6b57'},S.flMark||{});S.flMark[k]=v;paint();save();try{syncFloorMarks();placeFloorMarks();redraw();}catch(e){}}
 panel.addEventListener('change',e=>{const id=e.target.id;if(id==='fmOn')fmSet('on',e.target.checked);if(id==='fmEvery'){const n=Math.max(2,Math.min(50,parseInt(e.target.value)||10));e.target.value=n;fmSet('every',n);}});
 panel.addEventListener('input',e=>{if(e.target.id==='fmColor')fmSet('color',e.target.value);});
 $('bDates').onclick=()=>{document.body.classList.toggle('datesOpen');window.dispatchEvent(new Event('resize'));};
