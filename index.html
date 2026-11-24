@@ -766,7 +766,7 @@ function quad(a,p0,p1,p2,p3,n,c,uv){const u=uv||[[0,0],[0,0],[0,0],[0,0]];const 
 function texFrom(src){const tx=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,tx);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,src);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);return tx;}
 const white=(()=>{const tx=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,tx);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([255,255,255,255]));return tx;})();
-const APP_VER='版本 2026-11-24b';const IS_TOUCH=('ontouchstart' in window)||navigator.maxTouchPoints>0;const SMS=IS_TOUCH?1024:2048;const smTex=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,smTex);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,SMS,SMS,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
+const APP_VER='版本 2026-11-24c';const IS_TOUCH=('ontouchstart' in window)||navigator.maxTouchPoints>0;const SMS=IS_TOUCH?1024:2048;const smTex=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,smTex);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,SMS,SMS,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
 gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
 const smFB=gl.createFramebuffer(),smRB=gl.createRenderbuffer();gl.bindFramebuffer(gl.FRAMEBUFFER,smFB);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,smTex,0);
 gl.bindRenderbuffer(gl.RENDERBUFFER,smRB);gl.renderbufferStorage(gl.RENDERBUFFER,gl.DEPTH_COMPONENT16,SMS,SMS);gl.framebufferRenderbuffer(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.RENDERBUFFER,smRB);gl.bindFramebuffer(gl.FRAMEBUFFER,null);
@@ -1068,6 +1068,7 @@ function render(){
   drawM(SC.north,{unlit:true});gl.disable(gl.BLEND);
   for(const b of S.buildings)drawM(SC.bm.get(b.id),{sy:groupsScale.get(b.id)??1,clip:flvClip(b)});
   try{facDraw();}catch(_){}
+  try{fmDraw();}catch(_){}
   try{roofPlanDraw();}catch(e){window.__rpErr=String(e);}
   try{flvDraw();}catch(_){}
   gl.useProgram(PL.p);gl.uniformMatrix4fv(PL.u.uVP,false,VP);gl.enable(gl.BLEND);
@@ -3732,6 +3733,28 @@ function foldApply(){const P=$('panel');if(!P)return;let first=true;const cmp=P.
   P.querySelectorAll('details').forEach(d=>{const s=d.querySelector('summary');if(!s)return;const k='d:'+foldKey(s);if(k in FOLD)d.open=FOLD[k];else if(d.closest('#panel')&&/🗺|🌏/.test(s.textContent))d.open=false;
     if(!d._fold){d._fold=1;d.addEventListener('toggle',()=>{FOLD[k]=d.open;foldSave();});}});}
 const _renderPanelF=renderPanel;renderPanel=function(){const r=_renderPanelF.apply(this,arguments);try{foldApply();}catch(e){}return r;};
+/* ======================= 🔢 层数标记直接印在楼身的色线上（不浮起来） ======================= */
+const FMT=new Map(),FMM=new Map();
+function fmTex(s){if(FMT.has(s))return FMT.get(s);const c=document.createElement('canvas');c.width=160;c.height=96;const g=c.getContext('2d');
+  g.fillStyle='#fff';g.font='900 80px -apple-system,"Helvetica Neue",Arial,sans-serif';g.textAlign='center';g.textBaseline='middle';g.lineWidth=10;g.strokeStyle='rgba(0,0,0,.35)';g.strokeText(s,80,52);g.fillText(s,80,52);
+  const o={tx:texFrom(c),a:160/96};FMT.set(s,o);return o;}
+function fmBuildB(b){const old=FMM.get(b.id);if(old)old.forEach(o=>freeMesh(o.m));FMM.delete(b.id);
+  const M=S.flMark||{on:true,every:10};if(M.on===false||b.type!=='own'||S.flMarks===false)return;const EV=fmEvery(),out=[];
+  for(let f=EV;f<b.floors;f+=EV){const s=String(f),T=fmTex(s),h=b.fh*0.82,w=h*T.a*(s.length>2?1:0.8),y=(b.y0||0)+b.fh*(f-0.5),arr=[],r=rad(b.rot||0);
+    [[0,1,b.d/2],[0,-1,b.d/2],[1,0,b.w/2],[-1,0,b.w/2]].forEach(([nx,nz,dd])=>{const off=dd+0.12,ln=[nx*off,nz*off],rt=[nz,-nx];
+      const P=(su,sv)=>{const lx=ln[0]+rt[0]*su*w/2,lz=ln[1]+rt[1]*su*w/2,q=rotY(lx,lz,r);return [b.x+q[0],y+sv*h/2,b.z+q[1]];};const n=rotY(nx,nz,r);
+      quad(arr,P(-1,1),P(-1,-1),P(1,-1),P(1,1),[n[0],0,n[1]],[1,1,1,1],[[0,0],[0,1],[1,1],[1,0]]);});
+    out.push({m:mesh(arr),tx:T.tx,f});}
+  FMM.set(b.id,out);}
+function fmDraw(){const M=S.flMark||{on:true};if(M.on===false||!(S.mode==='none'||S.mode==='type'||S.mode==='look'))return;
+  gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
+  for(const b of S.buildings){const L=FMM.get(b.id);if(!L)continue;const sy=groupsScale.get(b.id)??1;if(sy<0.999)continue;const cl=flvClip(b);
+    for(const o of L)drawM(o.m,{tex:o.tx,unlit:true,clip:cl});}
+  gl.disable(gl.BLEND);}
+const _buildBuilding=buildBuilding;buildBuilding=function(b){const r=_buildBuilding.apply(this,arguments);try{fmBuildB(b);}catch(e){}return r;};
+const _rebuildAllF=rebuildAll;rebuildAll=function(){for(const id of [...FMM.keys()])if(!bById(id)){FMM.get(id).forEach(o=>freeMesh(o.m));FMM.delete(id);}return _rebuildAllF.apply(this,arguments);};
+fmOff=function(){return true;};try{syncFloorMarks();}catch(e){}
+setTimeout(()=>{try{S.buildings.forEach(fmBuildB);redraw();}catch(e){}},200);
 /* ======================= 🎬 展示录成视频，可以下载 / 分享 ======================= */
 Object.assign(I18N.zh,{rc_btn:'⏺ 录成视频',rc_on:'● 录影中…',rc_ready:'🎬 视频好了',rc_dl:'⬇ 下载视频',rc_share:'📤 分享（WhatsApp 等）',rc_close:'关闭',rc_no:'这个浏览器不能录视频，请用 Chrome 或新版 Safari',rc_h:'如果按「下载」没反应（Claude 链接版有时会挡），请用「分享」，或用离线 HTML / Railway 版。',rc_size:'{0} MB · {1} 秒'});
 Object.assign(I18N.en,{rc_btn:'⏺ Record video',rc_on:'● Recording…',rc_ready:'🎬 Video ready',rc_dl:'⬇ Download video',rc_share:'📤 Share (WhatsApp etc.)',rc_close:'Close',rc_no:'This browser cannot record video — use Chrome or a recent Safari',rc_h:'If Download does nothing (the Claude link sometimes blocks it), use Share, or the offline HTML / Railway version.',rc_size:'{0} MB · {1} s'});
