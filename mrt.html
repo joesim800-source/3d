@@ -43,6 +43,12 @@ button.on{background:#dc2626;border-color:#dc2626;color:#fff}
 .seg{display:inline-flex;border:1px solid #d8d2c6;border-radius:10px;overflow:hidden}
 .seg button{border:0;border-radius:0;padding:6px 10px;font-size:12px}
 .seg button.on{background:var(--g);color:#fff}
+.d3o{display:none}body.d3 #tools .d3o{display:block}#mt .g3b{color:#1d4ed8;font-weight:800}
+#g3Box{position:fixed;inset:0;z-index:200;background:#000}#g3Box gmp-map-3d{position:absolute;inset:0;width:100%;height:100%}
+#g3Box .g3bar{position:absolute;left:50%;transform:translateX(-50%);bottom:max(14px,env(safe-area-inset-bottom));display:flex;gap:8px;z-index:2;flex-wrap:wrap;justify-content:center;width:max-content;max-width:96vw}
+#g3Box .g3bar button,#g3Box .g3x{background:#fff;border:0;border-radius:14px;padding:10px 14px;font-size:15px;font-weight:800;box-shadow:0 3px 12px #0005;color:#0f2e25}
+#g3Box .g3x{position:absolute;top:max(12px,env(safe-area-inset-top));right:12px;z-index:2;font-size:16px}
+#g3Box .g3t{position:absolute;top:max(12px,env(safe-area-inset-top));left:12px;z-index:2;background:#0f2e25e6;color:#fff;border-radius:12px;padding:8px 12px;font-size:13px;font-weight:700;max-width:60vw}
 #mt{position:fixed;left:10px;z-index:9;display:flex;gap:6px;flex-wrap:wrap}#mt .seg{background:#fff;box-shadow:0 2px 8px #0002}
 #tools{position:fixed;right:10px;z-index:9;display:flex;flex-direction:column;gap:6px}
 #tools button{width:42px;height:42px;padding:0;font-size:18px;border-radius:12px;box-shadow:0 2px 8px #0002}
@@ -107,8 +113,8 @@ body.routing .cd,body.routing .lm,body.routing #strip{display:none!important}
     </div>
   </div>
 </div>
-<div id="mt"><span class="seg"><button data-mt="st">街道</button><button data-mt="sat">卫星</button><button data-mt="topo">地形</button></span><span class="seg"><button data-d3="0">2D</button><button data-d3="1">3D</button></span></div>
-<div id="tools"><button id="bLm" title="周边地标">📍</button><button id="bRt" title="路线模拟">🚗</button><button id="bNorth" title="指北"><span style="display:inline-block">🧭</span></button><button id="bIn">＋</button><button id="bOut">－</button><button id="bFit" title="全线">⤢</button></div>
+<div id="mt"><span class="seg"><button data-mt="st">街道</button><button data-mt="sat">卫星</button><button data-mt="topo">地形</button></span><span class="seg"><button data-d3="0">2D</button><button data-d3="1">3D</button></span><span class="seg"><button id="bG3" class="g3b">📷 真实3D</button></span></div>
+<div id="tools"><button id="bLm" title="周边地标">📍</button><button id="bRt" title="路线模拟">🚗</button><button id="bNorth" title="指北"><span style="display:inline-block">🧭</span></button><button id="bRotL" class="d3o" title="向左转">⟲</button><button id="bRotR" class="d3o" title="向右转">⟳</button><button id="bTilt" class="d3o" title="斜 / 平">◢</button><button id="bIn">＋</button><button id="bOut">－</button><button id="bFit" title="全线">⤢</button></div>
 <div id="strip"></div>
 <div id="attr">地图 © Esri · 线路与楼名 © OpenStreetMap contributors</div>
 <div id="sheet"><div class="hd"><h2 id="shT"></h2><button id="shX">✕</button></div><div class="bd" id="shB"></div></div>
@@ -183,27 +189,37 @@ if(gl){
    `precision mediump float;uniform float fogA;uniform float fogB;uniform vec3 sky;varying vec4 vc;varying float d;void main(){float f=clamp((d-fogA)/(fogB-fogA),0.,1.);gl_FragColor=vec4(mix(vc.rgb,sky,f*0.85),vc.a);}`);
   TBUF=gl.createBuffer();}
 const TX=new Map();
-function texOf(src,z,x,y){const n=2**z;if(y<0||y>=n)return null;x=((x%n)+n)%n;const k=src+z+'/'+x+'/'+y;let o=TX.get(k);
-  if(!o){o={im:new Image(),tx:null,bad:false,t:0};o.im.crossOrigin='anonymous';o.im.onload=()=>{try{o.tx=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,o.tx);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,o.im);
-      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);}catch(e){o.bad=true;}req();};
-    o.im.onerror=()=>{o.bad=true;};o.im.src=TILES[src].replace('{z}',z).replace('{y}',y).replace('{x}',x);TX.set(k,o);
-    if(TX.size>700){for(const [kk,oo] of TX){if(TX.size<=600)break;if(oo.t<performance.now()-4000){if(oo.tx)gl.deleteTexture(oo.tx);TX.delete(kk);}}}}
+function texOf(src,z,x,y,peek){const n=2**z;if(y<0||y>=n)return null;x=((x%n)+n)%n;const k=src+z+'/'+x+'/'+y;let o=TX.get(k);
+  if(!o){if(peek)return null;o={im:new Image(),tx:null,bad:false,t:0};o.im.crossOrigin='anonymous';o.im.decoding='async';o.im.onload=()=>{try{o.tx=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,o.tx);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,o.im);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);o.im=null;}catch(e){o.bad=true;}req();};
+    o.im.onerror=()=>{o.bad=true;};o.im.src=TILES[src].replace('{z}',z).replace('{y}',y).replace('{x}',x);TX.set(k,o);}
   o.t=performance.now();return o;}
-function visRange(){/* 屏幕看得到的地面范围（世界单位） */let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;const lim=CAM.D*(V.pitch>40?5:3);
+function txTrim(){/* 只留最近用过的图块，iPad 不会被撑爆 */if(TX.size<=320)return;const now=performance.now();const A=[...TX.entries()].filter(e=>now-e[1].t>1500).sort((a,b)=>a[1].t-b[1].t);
+  for(const [k,o] of A){if(TX.size<=260)break;if(o.tx)gl.deleteTexture(o.tx);if(o.im)o.im.src='';TX.delete(k);}}
+function visRange(){/* 屏幕看得到的地面范围（世界单位） */let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;const lim=CAM.D*(V.pitch>40?6:3.5);
   for(let i=0;i<=6;i++)for(let j=0;j<=6;j++){let p=groundAt(W*i/6,H*j/6);if(!p){const q=groundAt(W*i/6,H*0.5+H*0.5*j/6);if(!q)continue;p=q;}
     const L=Math.hypot(p[0]-CAM.eye[0],p[1]-CAM.eye[1]);if(L>lim){const s=lim/L;p=[CAM.eye[0]+(p[0]-CAM.eye[0])*s,CAM.eye[1]+(p[1]-CAM.eye[1])*s];}
     x0=Math.min(x0,p[0]);x1=Math.max(x1,p[0]);y0=Math.min(y0,p[1]);y1=Math.max(y1,p[1]);}
   return [x0,x1,y0,y1];}
-function glTiles(src,alpha){const R=visRange();let z=Math.max(2,Math.min(19,Math.floor(V.z+0.25)));let s,tx0,tx1,ty0,ty1;
-  for(;;){s=2**(V.z-z);tx0=Math.floor((CAM.cx+R[0])/s/256);tx1=Math.floor((CAM.cx+R[1])/s/256);ty0=Math.floor((CAM.cy+R[2])/s/256);ty1=Math.floor((CAM.cy+R[3])/s/256);if((tx1-tx0+1)*(ty1-ty0+1)<=160||z<=3)break;z--;}
+/* 近的用清晰图块，远的用粗一点的图块（像 Google 地图），图块少很多、不会卡 */
+function tileList(){const R=visRange(),E=CAM.eye,D=CAM.D,bias=DPR>1.2?0.6:0.25,zmax=Math.min(19,Math.floor(V.z+bias));const out=[];
+  const z0=Math.max(2,Math.min(zmax,Math.floor(V.z)-5));const s0=2**(V.z-z0)*256;
+  const tx0=Math.floor((CAM.cx+R[0])/s0),tx1=Math.floor((CAM.cx+R[1])/s0),ty0=Math.floor((CAM.cy+R[2])/s0),ty1=Math.floor((CAM.cy+R[3])/s0);
+  const visit=(z,x,y)=>{const sz=2**(V.z-z)*256,ax=x*sz-CAM.cx,ay=y*sz-CAM.cy,bx=ax+sz,by=ay+sz;if(bx<R[0]||ax>R[1]||by<R[2]||ay>R[3])return;
+    const dx=Math.max(ax-E[0],0,E[0]-bx),dy=Math.max(ay-E[1],0,E[1]-by),dist=Math.hypot(dx,dy,E[2]);
+    const want=Math.min(zmax,Math.floor(V.z+bias-Math.log2(Math.max(1,dist/D))));
+    if(z<want&&out.length<150){visit(z+1,x*2,y*2);visit(z+1,x*2+1,y*2);visit(z+1,x*2,y*2+1);visit(z+1,x*2+1,y*2+1);}else out.push([z,x,y,ax,ay,bx,by]);};
+  for(let y=ty0;y<=ty1;y++)for(let x=tx0;x<=tx1;x++)visit(z0,x,y);return out;}
+let TL=null;
+function glTiles(src,alpha){const L=TL||(TL=tileList());const Q=[],T=[];
+  for(const [z,x,y,ax,ay,bx,by] of L){let o=texOf(src,z,x,y),u0=0,v0=0,u1=1,v1=1;
+    if(!o||!o.tx){/* 还没下载好：用上面几层放大顶着，不会出现空洞 */o=null;for(let up=1;up<=6&&z-up>=1;up++){const q=texOf(src,z-up,x>>up,y>>up,true);if(q&&q.tx){const n=2**up,f=1/n;u0=(x-((x>>up)<<up))*f;v0=(y-((y>>up)<<up))*f;u1=u0+f;v1=v0+f;o=q;q.t=performance.now();break;}}if(!o)continue;}
+    Q.push(ax,ay,u0,v0, ax,by,u0,v1, bx,by,u1,v1, ax,ay,u0,v0, bx,by,u1,v1, bx,ay,u1,v0);T.push(o.tx);}
+  if(!T.length)return;
   gl.useProgram(PT_);gl.uniformMatrix4fv(gl.getUniformLocation(PT_,'M'),false,CAM.M);gl.uniform1f(gl.getUniformLocation(PT_,'a'),alpha);fogU(PT_);
-  const ap=gl.getAttribLocation(PT_,'p'),au=gl.getAttribLocation(PT_,'uv');gl.bindBuffer(gl.ARRAY_BUFFER,TBUF);gl.enableVertexAttribArray(ap);gl.enableVertexAttribArray(au);
-  gl.vertexAttribPointer(ap,2,gl.FLOAT,false,16,0);gl.vertexAttribPointer(au,2,gl.FLOAT,false,16,8);
-  for(let ty=ty0;ty<=ty1;ty++)for(let tx=tx0;tx<=tx1;tx++){let o=texOf(src,z,tx,ty),u0=0,v0=0,u1=1,v1=1;
-    if(!o||!o.tx){/* 还没下载好：先用上一层放大顶着 */let pz=z-1,px=tx>>1,py=ty>>1,q=texOf(src,pz,px,py);if(q&&q.tx){u0=(tx&1)*0.5;v0=(ty&1)*0.5;u1=u0+0.5;v1=v0+0.5;o=q;}else continue;}
-    const x0=tx*256*s-CAM.cx,y0=ty*256*s-CAM.cy,x1=x0+256*s,y1=y0+256*s;
-    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([x0,y0,u0,v0, x0,y1,u0,v1, x1,y1,u1,v1, x0,y0,u0,v0, x1,y1,u1,v1, x1,y0,u1,v0]),gl.STREAM_DRAW);
-    gl.bindTexture(gl.TEXTURE_2D,o.tx);gl.drawArrays(gl.TRIANGLES,0,6);}}
+  const ap=gl.getAttribLocation(PT_,'p'),au=gl.getAttribLocation(PT_,'uv');gl.bindBuffer(gl.ARRAY_BUFFER,TBUF);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(Q),gl.STREAM_DRAW);
+  gl.enableVertexAttribArray(ap);gl.enableVertexAttribArray(au);gl.vertexAttribPointer(ap,2,gl.FLOAT,false,16,0);gl.vertexAttribPointer(au,2,gl.FLOAT,false,16,8);
+  for(let i=0;i<T.length;i++){gl.bindTexture(gl.TEXTURE_2D,T[i]);gl.drawArrays(gl.TRIANGLES,i*6,6);}}
 function fogU(p){const D=CAM.D;gl.uniform1f(gl.getUniformLocation(p,'fogA'),D*1.6);gl.uniform1f(gl.getUniformLocation(p,'fogB'),D*(V.pitch>40?5:3.2));gl.uniform3fv(gl.getUniformLocation(p,'sky'),[0.86,0.91,0.96]);}
 /* ---- 3D 楼（OpenStreetMap 楼房轮廓 + 层数） ---- */
 const BZ=20,BO={x:0,y:0,set:false};let BLDS=new Map(),BLDV=null,BLDN=0,BLD_DIRTY=true;const BQ=new Set();
@@ -216,7 +232,7 @@ function earcut(pts){/* 简单耳切法，够用在楼房轮廓 */const n=pts.le
   if(V2.length===3)out.push(V2[0],V2[1],V2[2]);return out;}
 function bldColor(t,name){const k=name?normName(name):'';const c=k&&PLAN&&PLAN.condos&&PLAN.condos.find(x=>x.k===k);
   if(c){const tr=tierOf(c);return tr==='ft'?[0.85,0.72,0.45,1]:[[0.92,0.93,0.92,1],[0.55,0.78,0.65,1],[0.9,0.74,0.45,1],[0.78,0.42,0.5,1]][tr];}
-  return UI.layer==='sat'?[0.94,0.94,0.92,0.93]:[0.96,0.95,0.93,0.97];}
+  return UI.layer==='sat'?[0.94,0.94,0.92,0.78]:[0.96,0.95,0.93,0.97];}
 function buildBld(){BLD_DIRTY=false;const A=[];if(!BO.set)return;const k=2**BZ;
   for(const b of BLDS.values()){const P=b.p,n=P.length/2,h=b.h*2**BZ/(156543.03392*Math.cos(b.lat*R2)),col=bldColor(b.t,b.name);
     for(let i=0;i<n;i++){const j=(i+1)%n,x0=P[i*2],y0=P[i*2+1],x1=P[j*2],y1=P[j*2+1];let nx=y1-y0,ny=-(x1-x0);const s=b.cw?-1:1;nx*=s;ny*=s;
@@ -251,7 +267,7 @@ function circ(lat,lng,r){const out=[];const m=r/mpp(lat);const cx=lx(lng,V.z)-CA
 function pathTo(P){g.beginPath();let started=false;P.forEach(p=>{if(p[2]<=0){started=false;return;}if(!started){g.moveTo(p[0],p[1]);started=true;}else g.lineTo(p[0],p[1]);});}
 function draw(){RQ=0;camSetup();
   if(gl){gl.viewport(0,0,glc.width,glc.height);gl.clearColor(0.86,0.91,0.96,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.disable(gl.DEPTH_TEST);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
-    glTiles(UI.layer,1);if(UI.layer==='sat')glTiles('ref',1);if(UI.d3)glBld();}
+    TL=null;glTiles(UI.layer,1);if(UI.layer==='sat')glTiles('ref',1);if(UI.d3)glBld();txTrim();}
   g.setTransform(DPR,0,0,DPR,0,0);g.clearRect(0,0,W,H);
   try{drawLm();}catch(e){}
   const sat=UI.layer==='sat';
@@ -297,8 +313,8 @@ function fitPts(pts,pad){if(!pts.length)return;let a=90,b=-90,c=180,d=-180;pts.f
   while(z>4){const f=fitW(z);if(f[0]<=ww&&f[1]*(1+V.pitch/90)<=hh)break;z-=0.25;}const cyS=ly((a+b)/2,z)-(top-bot)/2*(UI.d3?0.6:1);flyTo(uny(cyS,z),(c+d)/2,z);}
 $('bIn').onclick=()=>zoomAt(V.z+1,W/2,H/2);$('bOut').onclick=()=>zoomAt(V.z-1,W/2,H/2);
 $('bFit').onclick=()=>{if(PLAN)fitPts(sel().map(s=>[s.lat,s.lng]));};
-function setD3(on){UI.d3=!!on;saveUI();if(UI.d3){flyTo(V.lat,V.lng,Math.max(V.z,15.2),700,58,V.bear||-20);toast('3D：两指上下推可以倾斜，两指转可以转方向',3500);}else flyTo(V.lat,V.lng,V.z,600,0,0);mapUI();}
-function mapUI(){document.querySelectorAll('#mt [data-mt]').forEach(b=>b.classList.toggle('on',b.dataset.mt===UI.layer));document.querySelectorAll('#mt [data-d3]').forEach(b=>b.classList.toggle('on',(b.dataset.d3==='1')===!!UI.d3));}
+function setD3(on){UI.d3=!!on;saveUI();if(UI.d3){flyTo(V.lat,V.lng,Math.max(V.z,15.2),700,55,V.bear||0);toast('3D：用右边 ⟲ ⟳ 转方向，◢ 斜/平；想看真实楼房按 📷 真实3D',4000);}else flyTo(V.lat,V.lng,V.z,600,0,0);mapUI();}
+function mapUI(){document.querySelectorAll('#mt [data-mt]').forEach(b=>b.classList.toggle('on',b.dataset.mt===UI.layer));document.querySelectorAll('#mt [data-d3]').forEach(b=>b.classList.toggle('on',(b.dataset.d3==='1')===!!UI.d3));document.body.classList.toggle('d3',!!UI.d3);}
 document.querySelectorAll('#mt [data-mt]').forEach(b=>b.onclick=()=>{UI.layer=b.dataset.mt;saveUI();BLD_DIRTY=true;mapUI();req();});
 document.querySelectorAll('#mt [data-d3]').forEach(b=>b.onclick=()=>setD3(b.dataset.d3==='1'));
 $('bNorth').onclick=()=>flyTo(V.lat,V.lng,V.z,500,UI.d3?V.pitch:0,0);
@@ -314,16 +330,17 @@ function tierOf(c){const d=DATA[c.k]||{};if(d.feat)return 'ft';const v=pv(c);if(
 /* ========== 名牌：自动找空位，不会叠在一起 ========== */
 const LAB=new Map();let ACT=null;
 function labEl(k,cls,html,on){let e=LAB.get(k);if(!e){e=document.createElement('div');$('labs').appendChild(e);LAB.set(k,e);e.addEventListener('click',ev=>{ev.stopPropagation();on();});}
-  if(e._h!==html)e.innerHTML=html,e._h=html;e.className=cls;return e;}
+  if(e._h!==html){e.innerHTML=html;e._h=html;e._sz=null;}if(e._c!==cls){e.className=cls;e._c=cls;e._sz=null;}return e;}
+function szOf(e){if(!e._sz||!e._sz[0])e._sz=[e.offsetWidth,e.offsetHeight];return e._sz;}
 function placeLabels(){const used=new Set(),boxes=[];
   const hit=(b)=>boxes.some(o=>!(b[2]<o[0]||b[0]>o[2]||b[3]<o[1]||b[1]>o[3]));
   if(PLAN&&V.z>=11.5){sel().forEach((s,i)=>{const k='s'+s.id;const p=toScr(s.lat,s.lng);const e=labEl(k,'st'+(ACT&&ACT.st===s.id?' on':''),`<i></i>${esc(s.name)}`,()=>openStation(s.id));
-      used.add(k);e.style.transform=`translate(${p[0]}px,${p[1]+9}px) translate(-50%,0)`;e.style.display='';const w=e.offsetWidth,h=e.offsetHeight;boxes.push([p[0]-w/2,p[1]+9,p[0]+w/2,p[1]+9+h]);});}
+      used.add(k);e.style.transform=`translate(${p[0]}px,${p[1]+9}px) translate(-50%,0)`;e.style.display='';const [w,h]=szOf(e);boxes.push([p[0]-w/2,p[1]+9,p[0]+w/2,p[1]+9+h]);});}
   if(PLAN&&V.z>=13.2&&!RT.on){const L=condos().slice().sort((a,b)=>(DATA[b.k]&&DATA[b.k].feat?1:0)-(DATA[a.k]&&DATA[a.k].feat?1:0));
     L.forEach(c=>{const k='c'+c.k;const p=toScr(c.lat,c.lng);if(p[0]<-200||p[0]>W+200||p[1]<-100||p[1]>H+100)return;const t=tierOf(c),d=DATA[c.k]||{},v=pv(c);
       const html=`<b>${esc(c.short||c.name)}${d.demo?'<span class="demo">示意</span>':''}</b><small>${v?'RM'+Math.round(v)+' psf'+(UI.pm==='tx'&&d.txn?' · '+d.txn+'笔':''):(UI.pm==='tx'?'暂无成交':'未填价格')}</small>`;
       const e=labEl(k,'cd '+(t==='ft'?'ft':'t'+t)+(ACT&&ACT.c===c.k?' sel':''),html,()=>openCondo(c.k));e.style.display='';
-      const w=e.offsetWidth,h=e.offsetHeight;const C=[[10,-h/2],[-w-10,-h/2],[-w/2,-h-10],[-w/2,10],[10,-h-6],[-w-10,6],[10,8],[-w-10,-h-6],[-w/2,-h-50],[-w/2,48]];
+      const [w,h]=szOf(e);const C=[[10,-h/2],[-w-10,-h/2],[-w/2,-h-10],[-w/2,10],[10,-h-6],[-w-10,6],[10,8],[-w-10,-h-6],[-w/2,-h-50],[-w/2,48]];
       let ok=null;for(const [dx,dy] of C){const b=[p[0]+dx,p[1]+dy,p[0]+dx+w,p[1]+dy+h];if(!hit(b)){ok=[dx,dy,b];break;}}
       if(!ok&&t!=='ft'&&V.z<16){e.style.display='none';used.add(k);return;}
       if(!ok){const b=[p[0]+10,p[1]-h/2,p[0]+10+w,p[1]+h/2];ok=[10,-h/2,b];}
@@ -583,6 +600,45 @@ addEventListener('resize',resize);resize();
 if(PLAN&&PLAN.stations&&PLAN.stations.length){refresh();const S=sel();const ft=condos().find(c=>(DATA[c.k]||{}).feat);
   if(ft){V.lat=ft.lat;V.lng=ft.lng;V.z=15;req();}else{V.lat=S[0].lat;V.lng=S[0].lng;V.z=12;setTimeout(()=>fitPts(S.map(s=>[s.lat,s.lng])),50);}}
 else{refresh();setTimeout(openSetup,300);}
+
+/* ===== 按钮：转方向 / 斜平 ===== */
+$('bRotL').onclick=()=>flyTo(V.lat,V.lng,V.z,450,null,V.bear-45);
+$('bRotR').onclick=()=>flyTo(V.lat,V.lng,V.z,450,null,V.bear+45);
+$('bTilt').onclick=()=>flyTo(V.lat,V.lng,V.z,450,V.pitch>30?15:58,null);
+/* ===== 📷 真实3D：Google 真实楼房（用 Prop 3D 同一把 Google key，只存在这台机） ===== */
+const GK='prop3d-gmkey';function gKey(){try{return localStorage.getItem(GK)||'';}catch(e){return '';}}
+let G3L=null;
+function g3Load(key){if(G3L)return G3L;G3L=new Promise((res,rej)=>{window.__g3cb=()=>{try{google.maps.importLibrary('maps3d').then(res,rej);}catch(e){rej(e);}};
+  window.gm_authFailure=()=>{rej(new Error('Google 不接受这把 key'));toast('Google 不接受这把 key，请检查',4000);};
+  const sc=document.createElement('script');sc.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=weekly&loading=async&callback=__g3cb`;sc.async=true;sc.onerror=()=>rej(new Error('网络'));document.head.appendChild(sc);
+  setTimeout(()=>rej(new Error('太久没反应')),20000);});G3L.catch(()=>{G3L=null;});return G3L;}
+function g3KeySheet(){sheet('📷 真实3D（Google）',`<p class="hint" style="margin-top:0">真实3D 用 Google 的真实楼房图，需要一把 Google Maps key。<b>如果你在 Prop 3D 已经放过，这里会自动用同一把。</b></p>
+  <label style="font-weight:700">Google Maps key</label><input id="g3K" type="password" autocomplete="off" placeholder="AIza…" style="width:100%;padding:10px;font-size:16px;margin:6px 0 10px;border:1px solid #ccc;border-radius:10px">
+  <p class="hint">免费拿 key：<a href="https://developers.google.com/maps/demo-key" target="_blank" rel="noopener">Google Maps Demo Key</a>。key 只存在这台机，不会上传。</p>
+  <button id="g3Save" class="pri" style="width:100%;padding:12px;font-size:16px">保存，打开真实3D</button>`);
+  $('g3Save').onclick=()=>{const v=$('g3K').value.trim();if(!v){toast('请先贴上 key');return;}try{localStorage.setItem(GK,v);}catch(e){}closeSheet();openReal3D();};}
+function g3Center(){if(ACT&&ACT.c&&PLAN){const c=PLAN.condos.find(x=>x.k===ACT.c);if(c)return [c.lat,c.lng,c.short||c.name];}
+  if(ACT&&ACT.st&&PLAN){const t=PLAN.stations.find(x=>x.id===ACT.st);if(t)return [t.lat,t.lng,t.name];}const ll=toLL(W/2,H/2);return [ll[0],ll[1],''];}
+async function openReal3D(){const key=gKey();if(!key){g3KeySheet();return;}
+  if(location.hostname.endsWith('claudeusercontent.com')||location.hostname.endsWith('claude.ai')){toast('真实3D 在 Claude 里面开不到，请用你桌面的 app 打开',4500);return;}
+  busy(1,'正在打开 Google 真实3D…');let lib;try{lib=await g3Load(key);}catch(e){busy(0);toast('打不开真实3D：'+(e.message||e),4500);return;}busy(0);
+  const {Map3DElement,Marker3DElement}=lib;const [la,ln,nm]=g3Center();const range=Math.max(350,Math.min(6000,mpp(V.lat)*H*1.1));
+  const box=document.createElement('div');box.id='g3Box';document.body.appendChild(box);let map;
+  try{map=new Map3DElement({center:{lat:la,lng:ln,altitude:0},range,tilt:60,heading:((V.bear%360)+360)%360,mode:'HYBRID'});}catch(e){try{map=new Map3DElement({center:{lat:la,lng:ln,altitude:0},range,tilt:60,heading:0});}catch(e2){box.remove();toast('打不开真实3D：'+(e2.message||e2),4500);return;}}
+  box.appendChild(map);
+  const mk=(lat,lng,label,alt)=>{try{map.append(new Marker3DElement({position:{lat,lng,altitude:alt},altitudeMode:'RELATIVE_TO_GROUND',extruded:true,label}));}catch(e){}};
+  if(PLAN){sel().forEach(t=>mk(t.lat,t.lng,'🚇 '+t.name,25));condos().slice(0,60).forEach(c=>{const v=pv(c);mk(c.lat,c.lng,(c.short||c.name)+(v?' · RM'+Math.round(v):''),(ACT&&ACT.c===c.k)?90:60);});}
+  box.insertAdjacentHTML('beforeend',`<div class="g3t">📷 真实3D ${nm?'· '+esc(nm):''}<br><span style="font-weight:500;opacity:.85">一指拖动 · 两指放大 / 转 · 按下面按钮更容易</span></div><button class="g3x">✕ 回到地图</button>
+   <div class="g3bar"><button data-g="l">⟲</button><button data-g="r">⟳</button><button data-g="in">＋</button><button data-g="out">－</button><button data-g="orb">🔄 绕一圈</button></div>`);
+  const cam=()=>({center:map.center,range:map.range,tilt:map.tilt,heading:map.heading});
+  const fly=(o,ms)=>{try{map.flyCameraTo({endCamera:{...cam(),...o},durationMillis:ms||600});}catch(e){Object.assign(map,o);}};
+  box.querySelector('.g3x').onclick=()=>{try{map.stopCameraAnimation&&map.stopCameraAnimation();}catch(e){}box.remove();};
+  box.querySelector('.g3bar').onclick=e=>{const b=e.target.closest('[data-g]');if(!b)return;const k=b.dataset.g;
+    if(k==='l')fly({heading:(map.heading||0)-45});if(k==='r')fly({heading:(map.heading||0)+45});
+    if(k==='in')fly({range:Math.max(80,(map.range||500)/1.8)});if(k==='out')fly({range:Math.min(20000,(map.range||500)*1.8)});
+    if(k==='orb'){try{map.flyCameraAround({camera:cam(),durationMillis:24000,rounds:1});}catch(err){toast('这个版本不支持绕一圈');}}};}
+$('bG3').onclick=openReal3D;
+
 window.__rcm={PLAN:()=>PLAN,DATA:()=>DATA,V};
 </script>
 </body>
