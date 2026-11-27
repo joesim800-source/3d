@@ -80,10 +80,20 @@ details summary{font:800 13.5px var(--sans);cursor:pointer;padding:4px 0;color:v
 #busy.show{display:flex}
 canvas.chart{width:100%;display:block;background:#fff;border-radius:12px;border:1px solid #eee6d8}
 .tag{display:inline-block;font:700 10.5px var(--sans);padding:1px 6px;border-radius:6px;background:#efe9dd;color:var(--gold2);margin-right:4px}
+.lm{position:absolute;left:0;top:0;pointer-events:auto;cursor:pointer;display:flex;align-items:center;gap:4px;height:30px;min-width:30px;padding:0 6px 0 4px;border-radius:15px;background:rgba(255,255,255,.95);border:1.5px solid #B08A4F;box-shadow:0 2px 6px #0003;white-space:nowrap}
+.lm span{font-size:17px;line-height:1;width:20px;text-align:center}.lm em{font:700 11.5px var(--sans);font-style:normal;color:#123449}.lm:not(.full){padding:0 4px;justify-content:center}
+#car{position:absolute;left:0;top:0;width:38px;height:38px;display:none;pointer-events:none;filter:drop-shadow(0 2px 4px #0005)}#car svg{width:38px;height:38px;transition:transform .08s linear}
+.rtag{position:absolute;left:0;top:0;white-space:nowrap;pointer-events:none;background:#fff;border:2px solid #0D4A38;border-radius:9px;padding:3px 9px;font:800 12.5px var(--sans);color:#0D4A38;box-shadow:0 2px 8px #0003}
+#rtB{border-color:#dc2626;color:#991b1b}
+#rbar{position:fixed;left:8px;right:8px;max-width:640px;margin:0 auto;bottom:calc(env(safe-area-inset-bottom) + 10px);z-index:22;background:#0D4A38;color:#fff;border-radius:14px;padding:9px 10px 9px 14px;display:none;align-items:center;gap:8px;box-shadow:0 6px 20px #0004}
+#rbar.show{display:flex}#rbar .tx{flex:1;min-width:0}#rbar b{display:block;font:800 13.5px var(--sans)}#rbar small{display:block;font:600 11.5px var(--sans);opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#rbar button{background:#ffffff22;border-color:#ffffff44;color:#fff;padding:7px 11px}
+body.routing .cd,body.routing .lm,body.routing #strip{display:none!important}
 </style>
 </head>
 <body>
-<div id="map"><canvas id="cv"></canvas><div id="labs"></div></div>
+<div id="map"><canvas id="cv"></canvas><div id="labs"></div><div id="car"><svg viewBox="0 0 38 38"></svg></div><div class="rtag" id="rtA" style="display:none"></div><div class="rtag" id="rtB" style="display:none"></div></div>
+<div id="rbar"><div class="tx"><b id="rbT"></b><small id="rbS"></small></div><button id="rbP">⏸</button><button id="rbR">↺</button><button id="rbX">✕</button></div>
 <div id="card">
   <div class="kick" id="kick">RAIL CORRIDOR · 500 M COLLECTION</div>
   <h1 id="ttl">沿线公寓比价</h1>
@@ -96,7 +106,7 @@ canvas.chart{width:100%;display:block;background:#fff;border-radius:12px;border:
     </div>
   </div>
 </div>
-<div id="tools"><button id="bLayer" title="图层">🛰</button><button id="bIn">＋</button><button id="bOut">－</button><button id="bFit" title="全线">⤢</button></div>
+<div id="tools"><button id="bLm" title="周边地标">📍</button><button id="bRt" title="路线模拟">🚗</button><button id="bLayer" title="图层">🛰</button><button id="bIn">＋</button><button id="bOut">－</button><button id="bFit" title="全线">⤢</button></div>
 <div id="strip"></div>
 <div id="attr">地图 © Esri · 线路与楼名 © OpenStreetMap contributors</div>
 <div id="sheet"><div class="hd"><h2 id="shT"></h2><button id="shX">✕</button></div><div class="bd" id="shB"></div></div>
@@ -158,6 +168,7 @@ function sel(){if(!PLAN)return[];const a=Math.min(PLAN.from,PLAN.to),b=Math.max(
 function condos(){if(!PLAN||!PLAN.condos)return[];const ids=new Set(sel().map(s=>s.id));return PLAN.condos.filter(c=>ids.has(c.st));}
 function draw(){RQ=0;g.setTransform(DPR,0,0,DPR,0,0);g.fillStyle='#e9e5dc';g.fillRect(0,0,W,H);
   drawTiles(UI.layer==='sat'?'sat':'st');if(UI.layer==='sat')drawTiles('ref');
+  try{drawLm();}catch(e){}
   const sat=UI.layer==='sat';
   if(PLAN){const S=sel();
     if(PLAN.path&&PLAN.path.length>1){g.lineJoin='round';g.lineCap='round';const P=PLAN.path.map(p=>toScr(p[0],p[1]));
@@ -169,8 +180,9 @@ function draw(){RQ=0;g.setTransform(DPR,0,0,DPR,0,0);g.fillStyle='#e9e5dc';g.fil
     if(V.z>=11.5)S.forEach((s,i)=>{const p=P[i];g.beginPath();g.arc(p[0],p[1],rpx,0,Math.PI*2);g.fillStyle=sat?'rgba(255,255,255,.07)':'rgba(13,74,56,.045)';g.fill();
       g.setLineDash([5,4]);g.lineWidth=1.2;g.strokeStyle=sat?'rgba(255,255,255,.85)':'rgba(13,74,56,.75)';g.stroke();g.setLineDash([]);});
     S.forEach((s,i)=>{const p=P[i];g.beginPath();g.arc(p[0],p[1],6,0,Math.PI*2);g.fillStyle='#fff';g.fill();g.lineWidth=3;g.strokeStyle=PLAN.color||'#0D4A38';g.stroke();});
-    if(V.z>=13)condos().forEach(c=>{const p=toScr(c.lat,c.lng),t=tierOf(c);g.beginPath();g.arc(p[0],p[1],4.5,0,Math.PI*2);g.fillStyle=t==='ft'?'#D9B772':['#9aa39f','#2F7D5B','#BE8A2E','#9E3344'][t];g.fill();g.lineWidth=1.5;g.strokeStyle='#fff';g.stroke();});}
-  placeLabels();}
+    if(V.z>=13&&!RT.on)condos().forEach(c=>{const p=toScr(c.lat,c.lng),t=tierOf(c);g.beginPath();g.arc(p[0],p[1],4.5,0,Math.PI*2);g.fillStyle=t==='ft'?'#D9B772':['#9aa39f','#2F7D5B','#BE8A2E','#9E3344'][t];g.fill();g.lineWidth=1.5;g.strokeStyle='#fff';g.stroke();});}
+  try{drawRoute();}catch(e){}
+  placeLabels();try{placeLm();placeRoute();}catch(e){}}
 
 /* ========== 价位分档：按这条线自己的价格分三份 ========== */
 let TIER=[0,0];
@@ -187,7 +199,7 @@ function placeLabels(){const used=new Set(),boxes=[];
   const hit=(b)=>boxes.some(o=>!(b[2]<o[0]||b[0]>o[2]||b[3]<o[1]||b[1]>o[3]));
   if(PLAN&&V.z>=11.5){sel().forEach((s,i)=>{const k='s'+s.id;const p=toScr(s.lat,s.lng);const e=labEl(k,'st'+(ACT&&ACT.st===s.id?' on':''),`<i></i>${esc(s.name)}`,()=>openStation(s.id));
       used.add(k);e.style.transform=`translate(${p[0]}px,${p[1]+9}px) translate(-50%,0)`;e.style.display='';const w=e.offsetWidth,h=e.offsetHeight;boxes.push([p[0]-w/2,p[1]+9,p[0]+w/2,p[1]+9+h]);});}
-  if(PLAN&&V.z>=13.2){const L=condos().slice().sort((a,b)=>(DATA[b.k]&&DATA[b.k].feat?1:0)-(DATA[a.k]&&DATA[a.k].feat?1:0));
+  if(PLAN&&V.z>=13.2&&!RT.on){const L=condos().slice().sort((a,b)=>(DATA[b.k]&&DATA[b.k].feat?1:0)-(DATA[a.k]&&DATA[a.k].feat?1:0));
     L.forEach(c=>{const k='c'+c.k;const p=toScr(c.lat,c.lng);if(p[0]<-200||p[0]>W+200||p[1]<-100||p[1]>H+100)return;const t=tierOf(c),d=DATA[c.k]||{},v=pv(c);
       const html=`<b>${esc(c.short||c.name)}${d.demo?'<span class="demo">示意</span>':''}</b><small>${v?'RM'+Math.round(v)+' psf'+(UI.pm==='tx'&&d.txn?' · '+d.txn+'笔':''):(UI.pm==='tx'?'暂无成交':'未填价格')}</small>`;
       const e=labEl(k,'cd '+(t==='ft'?'ft':'t'+t)+(ACT&&ACT.c===c.k?' sel':''),html,()=>openCondo(c.k));e.style.display='';
@@ -304,6 +316,7 @@ function openCondo(k){const c=PLAN.condos.find(x=>x.k===k);if(!c)return;ACT={c:k
    <div><small>月租</small><b>${+d.rmin?'RM'+d.rmin+(+d.rmax?'–'+d.rmax:''):'—'}</b><em>${y?'回报率约 '+y.toFixed(1)+'%':'填面积可算回报率'}</em></div>
    <div><small>叫价 vs 成交</small><b style="font-size:15px">${gapTxt(d)||'—'}</b><em>${d.tenure?esc(d.tenure):''}${d.yr?' · '+d.yr+' 年':''}${d.units?' · '+d.units+' 户':''}</em></div></div>
    <div class="row"><button class="${d.feat?'on':'gold'}" id="cFt">${d.feat?'⭐ 已是主推（再按取消）':'⭐ 设为主推'}</button><a class="btn" href="https://www.iproperty.com.my/sale/?q=${encodeURIComponent(c.name)}" target="_blank" rel="noopener">More · iProperty ↗</a></div>
+   <div class="row" style="margin-top:8px"><button id="cLm">📍 周边地标</button><button id="cRt">🚗 路线模拟</button></div>
    <details><summary>✏️ 改这个盘的资料</summary><div class="fm">
     <label>叫价 psf</label><input type="number" inputmode="decimal" id="fAsk" value="${esc(d.ask||'')}">
     <label>成交 psf</label><input type="number" inputmode="decimal" id="fTx" value="${esc(d.tx||'')}">
@@ -316,6 +329,7 @@ function openCondo(k){const c=PLAN.condos.find(x=>x.k===k);if(!c)return;ACT={c:k
     <label>产权</label><input type="text" id="fTen" value="${esc(d.tenure||'')}" placeholder="Freehold / Leasehold / 马来保留地…">
     <label>地图短名</label><input type="text" id="fShort" value="${esc(c.short||'')}">
    </div><div class="row"><button class="pri" id="cSave">储存</button>${c.manual?'<button id="cDel">删除这个盘</button>':'<button id="cHide">从图上拿掉</button>'}</div></details>`);
+  $('cLm').onclick=()=>{ACT={c:k,st:c.st};openLandmarks();};$('cRt').onclick=()=>{ACT={c:k,st:c.st};openRoutes();};
   $('cFt').onclick=()=>{const was=!!d.feat;PLAN.condos.forEach(x=>{if(DATA[x.k])DATA[x.k].feat=false;});d.feat=!was;saveData();openCondo(k);};
   $('cSave').onclick=()=>{const n=id=>{const v=$(id).value.trim();return v===''?'':+v;};Object.assign(d,{ask:n('fAsk'),tx:n('fTx'),txn:n('fTxn'),rmin:n('fRmin'),rmax:n('fRmax'),size:n('fSize'),units:n('fUnits'),yr:n('fYr'),tenure:$('fTen').value.trim(),demo:false});
     c.short=$('fShort').value.trim()||c.short;saveData();savePlan();toast('已储存');openCondo(k);};
@@ -375,6 +389,95 @@ function demoFill(){if(!PLAN||!PLAN.condos){toast('先找公寓');return;}const 
   Object.assign(d,{ask:Math.round(base),tx:Math.random()<0.75?Math.round(base*(0.86+Math.random()*0.1)):'',txn:Math.round(3+Math.random()*20),rmin:Math.round(base*1.9/10)*10,rmax:Math.round(base*2.6/10)*10,size:850,demo:true});});
   saveData();refresh();toast('已填入示意数字（会标「示意」，不是真实价格）',3500);}
 
+/* ========== 📍 周边地标（3 / 5 公里） ========== */
+const CATS={mall:{i:'🛍',n:'商场'},sch:{i:'🏫',n:'学校'},hos:{i:'🏥',n:'医院'},stn:{i:'🚉',n:'车站'},hwy:{i:'🛣',n:'大路入口'},mkt:{i:'🛒',n:'超市'},fuel:{i:'⛽',n:'油站'},park:{i:'🌳',n:'公园'}};
+if(!UI.lmOn)UI.lmOn={mall:1,sch:1,hos:1,stn:1,hwy:1,mkt:1,fuel:0,park:0};
+function catOf(t){if(t.shop==='mall')return 'mall';if(/^(school|university|college)$/.test(t.amenity||''))return 'sch';if(t.amenity==='hospital')return 'hos';
+  if(t.railway==='station'||t.public_transport==='station')return 'stn';if(t.highway==='motorway_junction')return 'hwy';if(t.shop==='supermarket')return 'mkt';if(t.amenity==='fuel')return 'fuel';if(t.leisure==='park')return 'park';return null;}
+function hubCondo(){const cs=condos();return cs.find(c=>(DATA[c.k]||{}).feat)||(ACT&&ACT.c&&PLAN.condos.find(c=>c.k===ACT.c))||null;}
+function hubLL(){const c=hubCondo();if(c)return {lat:c.lat,lng:c.lng,name:c.name};const m=toLL(W/2,H/2);return {lat:m[0],lng:m[1],name:'地图中心'};}
+async function loadLandmarks(r){const h=hubLL();busy(1,`正在找 ${r/1000} 公里内的地标…`);try{
+  const a=`(around:${r},${h.lat.toFixed(5)},${h.lng.toFixed(5)})`;const sel=['["shop"="mall"]["name"]','["amenity"~"^(school|university|college)$"]["name"]','["amenity"="hospital"]["name"]','["railway"="station"]["name"]','["highway"="motorway_junction"]','["shop"="supermarket"]["name"]','["amenity"="fuel"]["name"]','["leisure"="park"]["name"]'];
+  const j=await overpass(`[out:json][timeout:90];(${sel.map(s=>`node${s}${a};way${s}${a};`).join('')});out center tags;`);
+  const by={},seen=new Set();j.elements.forEach(e=>{const t=e.tags||{},c=e.center||e;if(c.lat==null)return;const k=catOf(t);if(!k)return;
+    let nm=(t['name:en']||t.name||'').trim();if(k==='hwy')nm=nm||(t.ref?'出口 '+t.ref:'大路出入口');if(!nm)return;const key=k+'|'+nm.toLowerCase();if(seen.has(key))return;seen.add(key);
+    (by[k]=by[k]||[]).push({cat:k,name:nm,lat:c.lat,lng:c.lon,d:Math.round(hav(h.lat,h.lng,c.lat,c.lon))});});
+  const items=[];Object.values(by).forEach(L=>{L.sort((x,y)=>x.d-y.d);items.push(...L.slice(0,15));});
+  PLAN.lm={lat:h.lat,lng:h.lng,name:h.name,r,items};savePlan();toast(`找到 ${items.length} 个地标`);}catch(e){toast('找地标失败：'+(e.message||e),4000);}finally{busy(0);}openLandmarks();}
+function openLandmarks(){if(!PLAN){openSetup();return;}const L=PLAN.lm,h=hubLL();
+  const list=L?Object.keys(CATS).map(k=>{const it=L.items.filter(x=>x.cat===k);if(!it.length)return '';return `<details ${UI.lmOn[k]?'open':''}><summary>${CATS[k].i} ${CATS[k].n}（${it.length}）</summary>${it.map((x,i)=>`<div class="li" data-lm="${L.items.indexOf(x)}"><span style="font-size:20px">${CATS[k].i}</span><div class="nm"><b>${esc(x.name)}</b><small>直线 ${(x.d/1000).toFixed(1)} 公里</small></div><button data-go="${L.items.indexOf(x)}">🚗 开过去</button></div>`).join('')}</details>`;}).join(''):'';
+  sheet('📍 周边地标',`<p class="hint" style="margin-top:0">中心：<b>${esc(L?L.name:h.name)}</b>${hubCondo()?'':'（设一个 ⭐ 主推盘，就会以它为中心）'}</p>
+   <div class="row"><span class="seg">${[3000,5000].map(r=>`<button data-lr="${r}" class="${L&&L.r===r?'on':''}">${r/1000} 公里</button>`).join('')}</span><button class="pri" id="lmGo">🔎 ${L?'重新找':'找地标'}</button></div>
+   <p class="hint">按种类开关地图上的图标：</p><div class="row">${Object.entries(CATS).map(([k,c])=>`<button data-lc="${k}" class="${UI.lmOn[k]?'on':''}">${c.i} ${c.n}</button>`).join('')}</div>${list}
+   <p class="hint">地标来自免费的 OpenStreetMap，距离是直线。按「🚗 开过去」会画出真的马路路线并模拟开车。</p>`);
+  let R=(L&&L.r)||5000;$('shB').querySelectorAll('[data-lr]').forEach(b=>b.onclick=()=>{R=+b.dataset.lr;$('shB').querySelectorAll('[data-lr]').forEach(x=>x.classList.toggle('on',x===b));});
+  $('lmGo').onclick=()=>loadLandmarks(R);
+  $('shB').querySelectorAll('[data-lc]').forEach(b=>b.onclick=()=>{const k=b.dataset.lc;UI.lmOn[k]=UI.lmOn[k]?0:1;saveUI();b.classList.toggle('on',!!UI.lmOn[k]);req();});
+  $('shB').querySelectorAll('[data-go]').forEach(b=>b.onclick=ev=>{ev.stopPropagation();const x=PLAN.lm.items[+b.dataset.go];routeTo({lat:x.lat,lng:x.lng,name:x.name},'drive');});
+  $('shB').querySelectorAll('[data-lm]').forEach(e=>e.onclick=()=>{const x=PLAN.lm.items[+e.dataset.lm];flyVis(x.lat,x.lng,Math.max(15,V.z));});
+  if(L)setTimeout(()=>fitPts([[L.lat,L.lng],...L.items.filter(x=>UI.lmOn[x.cat]).map(x=>[x.lat,x.lng])]),40);}
+const LME=new Map();
+function drawLm(){const L=PLAN&&PLAN.lm;if(!L||RT.on)return;const p=toScr(L.lat,L.lng),rp=L.r/mpp(V.lat);g.beginPath();g.arc(p[0],p[1],rp,0,Math.PI*2);g.setLineDash([8,6]);g.lineWidth=2;g.strokeStyle='rgba(176,138,79,.9)';g.stroke();g.setLineDash([]);
+  g.fillStyle='rgba(176,138,79,.06)';g.fill();}
+function placeLm(){const L=PLAN&&PLAN.lm,used=new Set();if(L&&!RT.on&&V.z>=11.5){L.items.forEach((x,i)=>{if(!UI.lmOn[x.cat])return;const p=toScr(x.lat,x.lng);if(p[0]<-150||p[0]>W+150||p[1]<-60||p[1]>H+60)return;const k='l'+i;used.add(k);
+    let e=LME.get(k);if(!e){e=document.createElement('div');e.className='lm';$('labs').appendChild(e);LME.set(k,e);e.addEventListener('click',ev=>{ev.stopPropagation();lmPop(i);});}
+    const full=V.z>=14.2;const h=`<span>${CATS[x.cat].i}</span>${full?'<em>'+esc(x.name.length>20?x.name.slice(0,19)+'…':x.name)+'</em>':''}`;if(e._h!==h){e.innerHTML=h;e._h=h;}e.classList.toggle('full',full);
+    e.style.transform=`translate(${p[0]}px,${p[1]}px) translate(-15px,-15px)`;});}
+  for(const [k,e] of LME)if(!used.has(k)){e.remove();LME.delete(k);}}
+function lmPop(i){const x=PLAN.lm.items[i];sheet(CATS[x.cat].i+' '+x.name,`<p class="hint" style="margin-top:0">${CATS[x.cat].n} · 离 ${esc(PLAN.lm.name)} 直线 ${(x.d/1000).toFixed(1)} 公里</p>
+  <div class="row"><button class="pri" id="lpD">🚗 从公寓开过去</button><button id="lpW">🚶 走过去</button></div>`);$('lpD').onclick=()=>routeTo(x,'drive');$('lpW').onclick=()=>routeTo(x,'walk');}
+
+/* ========== 🚗 路线模拟 ========== */
+const RT={on:false,path:null,cum:null,L:0,t0:0,dur:9000,play:false,raf:0,from:null,to:null,mode:'drive',dist:0,time:0,el:null,tags:[]};
+async function osrm(a,b,mode){const base=mode==='walk'?'https://routing.openstreetmap.de/routed-foot/route/v1/driving/':'https://router.project-osrm.org/route/v1/driving/';
+  const r=await fetch(`${base}${a.lng},${a.lat};${b.lng},${b.lat}?overview=full&geometries=geojson`);const j=await r.json();const rt=j.routes&&j.routes[0];if(!rt)throw new Error('找不到路');
+  return {path:rt.geometry.coordinates.map(c=>[c[1],c[0]]),dist:rt.distance,time:rt.duration};}
+function fromCondo(){const c=hubCondo();if(c)return {lat:c.lat,lng:c.lng,name:c.short||c.name};return null;}
+async function routeTo(dest,mode,origin){const o=origin||fromCondo();if(!o){toast('先点一个公寓，或设一个 ⭐ 主推盘');return;}busy(1,mode==='walk'?'正在找走路的路…':'正在找开车的路…');
+  try{const r=await osrm(o,dest,mode);const rec={from:o,to:{lat:dest.lat,lng:dest.lng,name:dest.name},mode,...r};PLAN.routes=(PLAN.routes||[]).filter(x=>!(x.from.name===o.name&&x.to.name===dest.name&&x.mode===mode));PLAN.routes.unshift(rec);PLAN.routes=PLAN.routes.slice(0,10);savePlan();
+    busy(0);closeSheetQuiet();playRoute(rec);}catch(e){busy(0);toast('找路失败：'+(e.message||e)+'。请检查网络。',4000);}}
+function closeSheetQuiet(){$('sheet').classList.remove('show');}
+function playRoute(rec){stopRoute(true);Object.assign(RT,{on:true,rec,path:rec.path,mode:rec.mode,dist:rec.dist,time:rec.time});const c=[0];for(let i=1;i<rec.path.length;i++)c.push(c[i-1]+hav(rec.path[i-1][0],rec.path[i-1][1],rec.path[i][0],rec.path[i][1]));RT.cum=c;RT.L=c[c.length-1];
+  document.body.classList.add('routing');$('rbar').classList.add('show');$('rbT').textContent=`${rec.mode==='walk'?'🚶 走路':'🚗 行驶'}模拟中 · ${(rec.dist/1000).toFixed(1)} 公里 · 约 ${Math.max(1,Math.round(rec.time/60))} 分钟`;
+  $('rbS').textContent=`${rec.from.name} → ${rec.to.name}`;
+  fitPts(rec.path,0);setTimeout(()=>{RT.t0=performance.now();RT.play=true;$('rbP').textContent='⏸';tick();},900);req();}
+function stopRoute(keep){cancelAnimationFrame(RT.raf);RT.play=false;if(!keep){RT.on=false;RT.path=null;document.body.classList.remove('routing');$('rbar').classList.remove('show');}req();}
+function routeAt(f){const s=f*RT.L,c=RT.cum,P=RT.path;let i=1;while(i<c.length-1&&c[i]<s)i++;const a=P[i-1],b=P[i],k=c[i]>c[i-1]?(s-c[i-1])/(c[i]-c[i-1]):0;return [a[0]+(b[0]-a[0])*k,a[1]+(b[1]-a[1])*k,i];}
+function tick(){if(!RT.on)return;const now=performance.now();if(RT.play){RT.f=Math.min(1,(now-RT.t0)/RT.dur);if(RT.f>=1){RT.play=false;$('rbP').textContent='▶';}}draw();if(RT.play)RT.raf=requestAnimationFrame(tick);}
+function drawRoute(){if(!RT.on||!RT.path)return;const P=RT.path.map(p=>toScr(p[0],p[1]));g.lineJoin='round';g.lineCap='round';
+  g.strokeStyle='#fff';g.lineWidth=9;g.beginPath();P.forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1]));g.stroke();g.strokeStyle=RT.mode==='walk'?'#16a34a':'#2563eb';g.lineWidth=5;if(RT.mode==='walk')g.setLineDash([2,9]);g.stroke();g.setLineDash([]);
+  const f=RT.f||0;if(f>0){const n=routeAt(f);g.strokeStyle='rgba(255,255,255,.55)';g.lineWidth=5;g.beginPath();g.moveTo(P[0][0],P[0][1]);for(let i=1;i<n[2];i++)g.lineTo(P[i][0],P[i][1]);const q=toScr(n[0],n[1]);g.lineTo(q[0],q[1]);g.stroke();}
+  [[RT.rec.from,'#0D4A38'],[RT.rec.to,'#dc2626']].forEach(([o,col])=>{const p=toScr(o.lat,o.lng);g.beginPath();g.arc(p[0],p[1],8,0,Math.PI*2);g.fillStyle=col;g.fill();g.lineWidth=3;g.strokeStyle='#fff';g.stroke();});}
+function placeRoute(){const E=$('car');if(!RT.on||!RT.path){E.style.display='none';$('rtA').style.display='none';$('rtB').style.display='none';return;}
+  const f=RT.f||0,n=routeAt(f),p=toScr(n[0],n[1]),m=routeAt(Math.min(1,f+0.004)),q=toScr(m[0],m[1]);let ang=Math.atan2(q[1]-p[1],q[0]-p[0])*180/Math.PI+90;if(Math.hypot(q[0]-p[0],q[1]-p[1])<0.5)ang=E._a||0;E._a=ang;
+  E.style.display='block';E.style.transform=`translate(${p[0]-19}px,${p[1]-19}px)`;E.querySelector('svg').style.transform=`rotate(${ang}deg)`;E.querySelector('svg').innerHTML=RT.mode==='walk'?WALK_SVG:CAR_SVG;
+  const A=toScr(RT.rec.from.lat,RT.rec.from.lng),B=toScr(RT.rec.to.lat,RT.rec.to.lng);
+  $('rtA').style.display='';$('rtA').textContent='🏢 '+RT.rec.from.name;$('rtA').style.transform=`translate(${A[0]}px,${A[1]-14}px) translate(-50%,-100%)`;
+  $('rtB').style.display='';$('rtB').textContent='🏁 '+RT.rec.to.name;$('rtB').style.transform=`translate(${B[0]}px,${B[1]-14}px) translate(-50%,-100%)`;}
+const CAR_SVG='<circle cx="19" cy="19" r="17" fill="#fff" stroke="#0D4A38" stroke-width="2"/><rect x="13" y="8" width="12" height="22" rx="5" fill="#2563eb"/><rect x="15" y="12" width="8" height="5" rx="1.5" fill="#bfdbfe"/><rect x="15" y="22" width="8" height="4" rx="1.5" fill="#bfdbfe"/><path d="M19 3 L23 8 L15 8 Z" fill="#0D4A38"/>';
+const WALK_SVG='<circle cx="19" cy="19" r="17" fill="#fff" stroke="#16a34a" stroke-width="2"/><circle cx="19" cy="12" r="4" fill="#16a34a"/><rect x="15" y="17" width="8" height="10" rx="3" fill="#16a34a"/><path d="M19 3 L23 8 L15 8 Z" fill="#16a34a"/>';
+function openRoutes(){if(!PLAN){openSetup();return;}const o=fromCondo();
+  const near=(L,lat,lng)=>L.reduce((b,x)=>{const d=hav(lat,lng,x.lat,x.lng);return !b||d<b.d?{x,d}:b;},null);
+  const ms=o&&PLAN.stations.length?near(PLAN.stations,o.lat,o.lng):null,hw=o&&PLAN.lm?near(PLAN.lm.items.filter(x=>x.cat==='hwy'),o.lat,o.lng):null;
+  sheet('🚗 路线模拟',`<p class="hint" style="margin-top:0">${o?`起点 / 终点：<b>${esc(o.name)}</b>`:'先在地图上点一个公寓，或设一个 ⭐ 主推盘。'}</p>
+   ${o?`<div class="row">${ms?`<button class="pri" id="rM">🚗 开去 ${esc(ms.x.name)} 站</button><button id="rMw">🚶 走去 ${esc(ms.x.name)} 站</button>`:''}
+   ${hw?`<button class="pri" id="rH">🛣 开去大路：${esc(hw.x.name)}</button>`:`<button id="rH0">🛣 找最近的大路入口</button>`}</div>
+   <div class="fm" style="margin-top:10px"><label>从地址开来</label><input id="rQ" placeholder="例如 Batu 9 Cheras 或 3.07, 101.76" value="${esc(UI.rq||'')}"></div><button id="rQgo">🚗 从这个地址开到公寓</button>`:''}
+   ${(PLAN.routes||[]).length?`<p class="hint" style="margin-top:12px">开过的路线（按 ▶ 再看一次）：</p>${PLAN.routes.map((r,i)=>`<div class="li"><button data-rp="${i}">▶</button><div class="nm"><b>${r.mode==='walk'?'🚶':'🚗'} ${esc(r.from.name)} → ${esc(r.to.name)}</b><small>${(r.dist/1000).toFixed(1)} 公里 · 约 ${Math.max(1,Math.round(r.time/60))} 分钟</small></div><button data-rd="${i}">🗑</button></div>`).join('')}`:''}
+   <p class="hint">路线来自免费的 OpenStreetMap 导航（OSRM），是真的马路走法。有时会看到绕一下或掉头，那是路口规定要这样走，不是画错。</p>`);
+  if($('rM'))$('rM').onclick=()=>routeTo({lat:ms.x.lat,lng:ms.x.lng,name:ms.x.name+' 站'},'drive');
+  if($('rMw'))$('rMw').onclick=()=>routeTo({lat:ms.x.lat,lng:ms.x.lng,name:ms.x.name+' 站'},'walk');
+  if($('rH'))$('rH').onclick=()=>routeTo(hw.x,'drive');
+  if($('rH0'))$('rH0').onclick=async()=>{await loadLandmarks((PLAN.lm&&PLAN.lm.r)||5000);openRoutes();};
+  if($('rQgo'))$('rQgo').onclick=async()=>{const q=$('rQ').value.trim();if(!q){toast('请写地址');return;}UI.rq=q;saveUI();const a=await geo(q);if(!a){toast('找不到这个地址，试试贴 Google 地图坐标');return;}routeTo(o,'drive',{lat:a[0],lng:a[1],name:q.length>18?q.slice(0,18)+'…':q});};
+  $('shB').querySelectorAll('[data-rp]').forEach(b=>b.onclick=()=>{closeSheetQuiet();playRoute(PLAN.routes[+b.dataset.rp]);});
+  $('shB').querySelectorAll('[data-rd]').forEach(b=>b.onclick=()=>{PLAN.routes.splice(+b.dataset.rd,1);savePlan();openRoutes();});}
+async function geo(q){const m=q.match(/(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/);if(m)return [+m[1],+m[2]];
+  try{const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=my&q='+encodeURIComponent(q));const j=await r.json();if(j&&j[0])return [+j[0].lat,+j[0].lon];}catch(e){}return null;}
+
+$('bLm').onclick=()=>openLandmarks();$('bRt').onclick=()=>openRoutes();
+$('rbP').onclick=()=>{if(!RT.on)return;if(RT.f>=1){RT.t0=performance.now();RT.f=0;RT.play=true;$('rbP').textContent='⏸';tick();return;}if(RT.play){RT.play=false;RT.pf=RT.f;$('rbP').textContent='▶';}else{RT.t0=performance.now()-(RT.pf||0)*RT.dur;RT.play=true;$('rbP').textContent='⏸';tick();}};
+$('rbR').onclick=()=>{if(RT.on)playRoute(RT.rec);};$('rbX').onclick=()=>{stopRoute();refresh();};
 /* ========== 刷新 ========== */
 function refresh(keepSheet){calcTiers();strip();document.querySelectorAll('#pm button').forEach(b=>b.classList.toggle('on',b.dataset.pm===UI.pm));
   $('ttl').textContent=PLAN?`${PLAN.lineName}${PLAN.stations.length?'：'+sel()[0].name+' → '+sel()[sel().length-1].name:''}`:'沿线公寓比价';
