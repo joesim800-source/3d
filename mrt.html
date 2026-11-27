@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>沿线公寓比价 · Rail Corridor</title>
+<style>
+:root{--g:#0D4A38;--gold:#B08A4F;--gold2:#7C5C24;--paper:#FAF7F1;--ink:#101B17;--navy:#123449;
+--t1:#2F7D5B;--t1b:rgba(233,246,238,.94);--t2:#BE8A2E;--t2b:rgba(253,243,226,.94);--t3:#9E3344;--t3b:rgba(251,236,239,.94);
+--serif:"Noto Serif SC","Songti SC","STSong",Georgia,serif;--sans:-apple-system,"PingFang SC","Noto Sans SC","Helvetica Neue",Arial,sans-serif}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;background:#e9e5dc;font-family:var(--sans);color:var(--ink)}
+#map{position:fixed;inset:0;touch-action:none;overflow:hidden;cursor:grab}
+#map canvas{position:absolute;inset:0;width:100%;height:100%}
+#labs{position:absolute;inset:0;pointer-events:none}
+.st{position:absolute;left:0;top:0;pointer-events:auto;white-space:nowrap;background:var(--navy);color:#fff;font:800 11px var(--sans);padding:3px 8px 3px 6px;border-radius:7px;border:1.5px solid #fff;box-shadow:0 2px 6px #0004;cursor:pointer;transform:translate(-50%,10px)}
+.st i{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--gold);margin-right:5px;vertical-align:1px}
+.st.on{background:var(--gold2)}
+.cd{position:absolute;left:0;top:0;pointer-events:auto;white-space:nowrap;border-radius:9px;padding:4px 9px 5px;border:1.5px solid;box-shadow:0 2px 8px #0003;cursor:pointer;line-height:1.15}
+.cd b{display:block;font:800 13.5px var(--sans);color:var(--ink)}
+.cd small{display:block;font:700 10px var(--sans);color:#3d4a44}
+.cd.t1{background:var(--t1b);border-color:var(--t1)}.cd.t2{background:var(--t2b);border-color:var(--t2)}.cd.t3{background:var(--t3b);border-color:var(--t3)}.cd.t0{background:rgba(255,255,255,.92);border-color:#9aa39f}
+.cd.ft{background:linear-gradient(135deg,#8E6A2C,#D9B772);border-color:#fff;animation:glow 2.2s ease-in-out infinite}
+.cd.ft b,.cd.ft small{color:#fff}
+.cd .demo{display:inline-block;margin-left:4px;font:700 9px var(--sans);color:#7c5c24;background:#fff8;border-radius:4px;padding:0 3px}
+@keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(217,183,114,.0),0 2px 8px #0003}50%{box-shadow:0 0 0 7px rgba(217,183,114,.35),0 2px 8px #0003}}
+@media (prefers-reduced-motion:reduce){.cd.ft{animation:none}}
+.cd.sel{outline:3px solid var(--g);outline-offset:2px}
+#card{position:fixed;left:10px;right:10px;top:calc(env(safe-area-inset-top) + 10px);max-width:560px;margin:0 auto;background:rgba(255,255,255,.86);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-radius:16px;border:1px solid rgba(176,138,79,.35);box-shadow:0 6px 24px #0002;padding:10px 12px 9px;z-index:10}
+#card .kick{font:700 10px var(--sans);letter-spacing:2px;color:var(--gold2);text-transform:uppercase}
+#card h1{font:600 18px var(--serif);margin:2px 0 4px;color:var(--g);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#card .gl{height:1px;background:linear-gradient(90deg,var(--gold),transparent);margin:4px 0 6px}
+.row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.leg{display:flex;gap:8px;font:700 11px var(--sans);color:#33413b;flex-wrap:wrap}
+.leg span{display:inline-flex;align-items:center;gap:4px}
+.leg i{width:10px;height:10px;border-radius:3px;display:inline-block;border:1.5px solid}
+button,.btn{font:700 13px var(--sans);border-radius:10px;border:1px solid #d8d2c6;background:#fff;color:var(--ink);padding:7px 11px;cursor:pointer}
+button:active{transform:scale(.95)}
+button.pri{background:var(--g);border-color:var(--g);color:#fff}
+button.gold{background:var(--gold);border-color:var(--gold);color:#fff}
+button.on{background:#dc2626;border-color:#dc2626;color:#fff}
+.seg{display:inline-flex;border:1px solid #d8d2c6;border-radius:10px;overflow:hidden}
+.seg button{border:0;border-radius:0;padding:6px 10px;font-size:12px}
+.seg button.on{background:var(--g);color:#fff}
+#tools{position:fixed;right:10px;z-index:9;display:flex;flex-direction:column;gap:6px}
+#tools button{width:42px;height:42px;padding:0;font-size:18px;border-radius:12px;box-shadow:0 2px 8px #0002}
+#strip{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 8px);z-index:9;display:flex;gap:8px;overflow-x:auto;padding:4px 10px;scrollbar-width:none}
+#strip::-webkit-scrollbar{display:none}
+.sc{flex:0 0 auto;background:rgba(255,255,255,.94);border-radius:12px;padding:7px 11px;border:1px solid #e4ddd0;box-shadow:0 2px 8px #0002;cursor:pointer;min-width:112px}
+.sc b{display:block;font:800 13px var(--sans);color:var(--navy);white-space:nowrap}
+.sc small{display:block;font:600 11px var(--sans);color:#5b6862;white-space:nowrap}
+.sc.on{background:var(--navy)}.sc.on b,.sc.on small{color:#fff}
+.sc.ov{background:var(--g)}.sc.ov b,.sc.ov small{color:#fff}
+#sheet{position:fixed;left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom) + 70px);z-index:20;max-width:640px;margin:0 auto;background:var(--paper);border-radius:18px;box-shadow:0 -8px 30px #0003;max-height:calc(100vh - 230px);display:flex;flex-direction:column;transform:translateY(calc(100% + 90px));transition:transform .25s ease}
+#sheet.show{transform:none}
+#sheet .hd{display:flex;align-items:center;gap:8px;padding:12px 14px 8px;border-bottom:1px solid #eee6d8}
+#sheet .hd h2{flex:1;margin:0;font:600 17px var(--serif);color:var(--g);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#sheet .bd{overflow:auto;padding:10px 14px 16px}
+.big{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:4px 0 10px}
+.big div{background:#fff;border:1px solid #eee6d8;border-radius:12px;padding:8px 10px}
+.big small{display:block;font:700 11px var(--sans);color:#6b756f}
+.big b{display:block;font:800 18px var(--sans);color:var(--ink)}
+.big em{font-style:normal;font:700 11px var(--sans);color:#6b756f}
+.li{display:flex;align-items:center;gap:8px;padding:9px 4px;border-bottom:1px solid #eee6d8;cursor:pointer}
+.li .dot{width:12px;height:12px;border-radius:50%;flex:0 0 auto;border:2px solid}
+.li .nm{flex:1;min-width:0}.li .nm b{display:block;font:800 14px var(--sans);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.li .nm small{font:600 11.5px var(--sans);color:#6b756f}
+.li .pv{text-align:right;font:800 13px var(--sans)}.li .pv small{display:block;font:600 11px var(--sans);color:#6b756f}
+.hint{font:500 12px var(--sans);color:#6b756f;line-height:1.5;margin:6px 0}
+.fm{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center;margin:8px 0}
+.fm label{font:700 12.5px var(--sans);color:#33413b}
+.fm input,.fm select,select.w,input.w{font:600 14px var(--sans);padding:7px 9px;border-radius:9px;border:1px solid #d8d2c6;background:#fff;width:100%;min-width:0}
+details{border:1px solid #eee6d8;border-radius:12px;background:#fff;padding:6px 10px;margin:8px 0}
+details summary{font:800 13.5px var(--sans);cursor:pointer;padding:4px 0;color:var(--g)}
+#toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 130px);transform:translateX(-50%);background:#101b17e6;color:#fff;font:700 13px var(--sans);padding:8px 14px;border-radius:12px;z-index:40;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw;text-align:center}
+#toast.show{opacity:1}
+#attr{position:fixed;left:8px;bottom:calc(env(safe-area-inset-bottom) + 74px);font:500 9.5px var(--sans);color:#333;background:#fff9;padding:1px 5px;border-radius:5px;z-index:8;pointer-events:none}
+#busy{position:fixed;inset:0;background:#fff6;z-index:50;display:none;align-items:center;justify-content:center;font:800 15px var(--sans);color:var(--g)}
+#busy.show{display:flex}
+canvas.chart{width:100%;display:block;background:#fff;border-radius:12px;border:1px solid #eee6d8}
+.tag{display:inline-block;font:700 10.5px var(--sans);padding:1px 6px;border-radius:6px;background:#efe9dd;color:var(--gold2);margin-right:4px}
+</style>
+</head>
+<body>
+<div id="map"><canvas id="cv"></canvas><div id="labs"></div></div>
+<div id="card">
+  <div class="kick" id="kick">RAIL CORRIDOR · 500 M COLLECTION</div>
+  <h1 id="ttl">沿线公寓比价</h1>
+  <div class="gl"></div>
+  <div class="row" style="justify-content:space-between">
+    <div class="leg" id="leg"></div>
+    <div class="row">
+      <div class="seg" id="pm"><button data-pm="ask">叫价</button><button data-pm="tx">成交</button></div>
+      <button class="pri" id="bSet">☰ 路线</button>
+    </div>
+  </div>
+</div>
+<div id="tools"><button id="bLayer" title="图层">🛰</button><button id="bIn">＋</button><button id="bOut">－</button><button id="bFit" title="全线">⤢</button></div>
+<div id="strip"></div>
+<div id="attr">地图 © Esri · 线路与楼名 © OpenStreetMap contributors</div>
+<div id="sheet"><div class="hd"><h2 id="shT"></h2><button id="shX">✕</button></div><div class="bd" id="shB"></div></div>
+<div id="toast"></div>
+<div id="busy">⏳ <span id="busyT">读取中…</span></div>
+<input type="file" id="fileIn" accept=".csv,text/csv,text/plain" style="display:none">
+<script>
+'use strict';
+/* ========== 小工具 ========== */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const LS={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){toast('⚠ 储存空间满了');}}};
+let TT=0;function toast(s,ms){const t=$('toast');t.textContent=s;t.classList.add('show');clearTimeout(TT);TT=setTimeout(()=>t.classList.remove('show'),ms||2600);}
+function busy(on,txt){$('busy').classList.toggle('show',!!on);if(txt)$('busyT').textContent=txt;}
+const R2=Math.PI/180;
+function hav(a,b,c,d){const R=6371000,x=(c-a)*R2,y=(d-b)*R2,s=Math.sin(x/2)**2+Math.cos(a*R2)*Math.cos(c*R2)*Math.sin(y/2)**2;return 2*R*Math.asin(Math.sqrt(s));}
+const walkMin=m=>Math.max(2,Math.round(m*1.3/78));
+const med=a=>{const v=a.filter(x=>x>0).sort((p,q)=>p-q);if(!v.length)return 0;const m=v.length>>1;return v.length%2?v[m]:(v[m-1]+v[m])/2;};
+const fmtRM=v=>!v?'—':v>=1e6?'RM'+(v/1e6).toFixed(2)+'M':'RM'+Math.round(v/1000)+'k';
+const normName=s=>String(s||'').toLowerCase().replace(/\b(blok|block|tower|menara|wing)\s*[a-z0-9]{1,2}\b/g,'').replace(/[^a-z0-9一-龥]+/g,' ').trim();
+
+/* ========== 状态 ========== */
+let PLAN=LS.get('rcm-plan',null);         // 选好的线路方案
+let DATA=LS.get('rcm-data',{});           // 各公寓的价格资料（按名字）
+let UI=LS.get('rcm-ui',{pm:'ask',layer:'sat',radius:500});
+let LINES=[];                              // 找到的线路列表
+const saveUI=()=>LS.set('rcm-ui',UI),savePlan=()=>LS.set('rcm-plan',PLAN),saveData=()=>LS.set('rcm-data',DATA);
+const dOf=c=>DATA[c.k]||(DATA[c.k]={});
+const pv=c=>{const d=DATA[c.k]||{};return +(UI.pm==='tx'?d.tx:d.ask)||0;};
+
+/* ========== 地图（Web Mercator，免 key） ========== */
+const TILES={st:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+  sat:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  ref:'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'};
+const V={lat:3.10,lng:101.70,z:11};
+let W=0,H=0,DPR=1;const cv=$('cv'),g=cv.getContext('2d');
+const TC=new Map();
+function lx(lng,z){return (lng+180)/360*256*2**z;}
+function ly(lat,z){const s=Math.sin(lat*R2);return (0.5-Math.log((1+s)/(1-s))/(4*Math.PI))*256*2**z;}
+function unx(x,z){return x/(256*2**z)*360-180;}
+function uny(y,z){const n=Math.PI-2*Math.PI*y/(256*2**z);return 180/Math.PI*Math.atan(Math.sinh(n));}
+function toScr(lat,lng){return [lx(lng,V.z)-lx(V.lng,V.z)+W/2,ly(lat,V.z)-ly(V.lat,V.z)+H/2];}
+function toLL(x,y){return [uny(ly(V.lat,V.z)+y-H/2,V.z),unx(lx(V.lng,V.z)+x-W/2,V.z)];}
+function mpp(lat){return 156543.03392*Math.cos(lat*R2)/2**V.z;}
+function tile(src,z,x,y){const n=2**z;if(y<0||y>=n)return null;x=((x%n)+n)%n;const k=src+z+'/'+x+'/'+y;let im=TC.get(k);
+  if(!im){im=new Image();im.crossOrigin='anonymous';im.onload=()=>req();im.onerror=()=>{im.bad=1;};im.src=TILES[src].replace('{z}',z).replace('{y}',y).replace('{x}',x);TC.set(k,im);if(TC.size>900){const f=TC.keys().next().value;TC.delete(f);}}
+  return im;}
+function drawTiles(src){const z=Math.max(2,Math.min(19,Math.floor(V.z+0.2))),s=2**(V.z-z),cx=lx(V.lng,z),cy=ly(V.lat,z);
+  const x0=Math.floor((cx-W/2/s)/256),x1=Math.floor((cx+W/2/s)/256),y0=Math.floor((cy-H/2/s)/256),y1=Math.floor((cy+H/2/s)/256);
+  for(let ty=y0;ty<=y1;ty++)for(let tx=x0;tx<=x1;tx++){const im=tile(src,z,tx,ty),px=(tx*256-cx)*s+W/2,py=(ty*256-cy)*s+H/2,sz=256*s;
+    if(im&&im.complete&&im.naturalWidth&&!im.bad)g.drawImage(im,px,py,sz+0.5,sz+0.5);
+    else{/* 用上一层放大的图先顶着 */const p=tile(src,z-1,tx>>1,ty>>1);if(p&&p.complete&&p.naturalWidth&&!p.bad)g.drawImage(p,(tx&1)*128,(ty&1)*128,128,128,px,py,sz+0.5,sz+0.5);}}}
+let RQ=0;function req(){if(!RQ)RQ=requestAnimationFrame(draw);}
+function resize(){DPR=Math.min(2,window.devicePixelRatio||1);W=innerWidth;H=innerHeight;cv.width=W*DPR;cv.height=H*DPR;layoutTools();req();}
+function layoutTools(){const c=$('card').getBoundingClientRect();$('tools').style.top=(c.bottom+10)+'px';}
+
+/* ========== 画线、圈、点 ========== */
+function sel(){if(!PLAN)return[];const a=Math.min(PLAN.from,PLAN.to),b=Math.max(PLAN.from,PLAN.to);return PLAN.stations.slice(a,b+1);}
+function condos(){if(!PLAN||!PLAN.condos)return[];const ids=new Set(sel().map(s=>s.id));return PLAN.condos.filter(c=>ids.has(c.st));}
+function draw(){RQ=0;g.setTransform(DPR,0,0,DPR,0,0);g.fillStyle='#e9e5dc';g.fillRect(0,0,W,H);
+  drawTiles(UI.layer==='sat'?'sat':'st');if(UI.layer==='sat')drawTiles('ref');
+  const sat=UI.layer==='sat';
+  if(PLAN){const S=sel();
+    if(PLAN.path&&PLAN.path.length>1){g.lineJoin='round';g.lineCap='round';const P=PLAN.path.map(p=>toScr(p[0],p[1]));
+      g.globalAlpha=.25;g.strokeStyle='#fff';g.lineWidth=4;g.beginPath();P.forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1]));g.stroke();g.globalAlpha=1;}
+    const P=S.map(s=>toScr(s.lat,s.lng));g.lineJoin='round';g.lineCap='round';
+    g.strokeStyle=sat?'rgba(240,215,160,.85)':'rgba(176,138,79,.6)';g.lineWidth=10;g.beginPath();P.forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1]));g.stroke();
+    g.strokeStyle=PLAN.color||'#0D4A38';g.lineWidth=4;g.stroke();
+    const rpx=UI.radius/mpp(V.lat);
+    if(V.z>=11.5)S.forEach((s,i)=>{const p=P[i];g.beginPath();g.arc(p[0],p[1],rpx,0,Math.PI*2);g.fillStyle=sat?'rgba(255,255,255,.07)':'rgba(13,74,56,.045)';g.fill();
+      g.setLineDash([5,4]);g.lineWidth=1.2;g.strokeStyle=sat?'rgba(255,255,255,.85)':'rgba(13,74,56,.75)';g.stroke();g.setLineDash([]);});
+    S.forEach((s,i)=>{const p=P[i];g.beginPath();g.arc(p[0],p[1],6,0,Math.PI*2);g.fillStyle='#fff';g.fill();g.lineWidth=3;g.strokeStyle=PLAN.color||'#0D4A38';g.stroke();});
+    if(V.z>=13)condos().forEach(c=>{const p=toScr(c.lat,c.lng),t=tierOf(c);g.beginPath();g.arc(p[0],p[1],4.5,0,Math.PI*2);g.fillStyle=t==='ft'?'#D9B772':['#9aa39f','#2F7D5B','#BE8A2E','#9E3344'][t];g.fill();g.lineWidth=1.5;g.strokeStyle='#fff';g.stroke();});}
+  placeLabels();}
+
+/* ========== 价位分档：按这条线自己的价格分三份 ========== */
+let TIER=[0,0];
+function calcTiers(){const v=condos().map(pv).filter(x=>x>0).sort((a,b)=>a-b);if(v.length<3){TIER=[0,0];}else{TIER=[v[Math.floor(v.length/3)],v[Math.floor(v.length*2/3)]];}
+  const L=$('leg');if(!TIER[0]){L.innerHTML='<span style="color:#6b756f">按「☰ 路线」选线，再填价格</span>';return;}
+  L.innerHTML=`<span><i style="background:var(--t1b);border-color:var(--t1)"></i>&lt;RM${Math.round(TIER[0])}</span><span><i style="background:var(--t2b);border-color:var(--t2)"></i>RM${Math.round(TIER[0])}–${Math.round(TIER[1])}</span><span><i style="background:var(--t3b);border-color:var(--t3)"></i>≥RM${Math.round(TIER[1])}</span><span style="color:#6b756f">/psf</span>`;}
+function tierOf(c){const d=DATA[c.k]||{};if(d.feat)return 'ft';const v=pv(c);if(!v||!TIER[0])return 0;return v<TIER[0]?1:v<TIER[1]?2:3;}
+
+/* ========== 名牌：自动找空位，不会叠在一起 ========== */
+const LAB=new Map();let ACT=null;
+function labEl(k,cls,html,on){let e=LAB.get(k);if(!e){e=document.createElement('div');$('labs').appendChild(e);LAB.set(k,e);e.addEventListener('click',ev=>{ev.stopPropagation();on();});}
+  if(e._h!==html)e.innerHTML=html,e._h=html;e.className=cls;return e;}
+function placeLabels(){const used=new Set(),boxes=[];
+  const hit=(b)=>boxes.some(o=>!(b[2]<o[0]||b[0]>o[2]||b[3]<o[1]||b[1]>o[3]));
+  if(PLAN&&V.z>=11.5){sel().forEach((s,i)=>{const k='s'+s.id;const p=toScr(s.lat,s.lng);const e=labEl(k,'st'+(ACT&&ACT.st===s.id?' on':''),`<i></i>${esc(s.name)}`,()=>openStation(s.id));
+      used.add(k);e.style.transform=`translate(${p[0]}px,${p[1]+9}px) translate(-50%,0)`;e.style.display='';const w=e.offsetWidth,h=e.offsetHeight;boxes.push([p[0]-w/2,p[1]+9,p[0]+w/2,p[1]+9+h]);});}
+  if(PLAN&&V.z>=13.2){const L=condos().slice().sort((a,b)=>(DATA[b.k]&&DATA[b.k].feat?1:0)-(DATA[a.k]&&DATA[a.k].feat?1:0));
+    L.forEach(c=>{const k='c'+c.k;const p=toScr(c.lat,c.lng);if(p[0]<-200||p[0]>W+200||p[1]<-100||p[1]>H+100)return;const t=tierOf(c),d=DATA[c.k]||{},v=pv(c);
+      const html=`<b>${esc(c.short||c.name)}${d.demo?'<span class="demo">示意</span>':''}</b><small>${v?'RM'+Math.round(v)+' psf'+(UI.pm==='tx'&&d.txn?' · '+d.txn+'笔':''):(UI.pm==='tx'?'暂无成交':'未填价格')}</small>`;
+      const e=labEl(k,'cd '+(t==='ft'?'ft':'t'+t)+(ACT&&ACT.c===c.k?' sel':''),html,()=>openCondo(c.k));e.style.display='';
+      const w=e.offsetWidth,h=e.offsetHeight;const C=[[10,-h/2],[-w-10,-h/2],[-w/2,-h-10],[-w/2,10],[10,-h-6],[-w-10,6],[10,8],[-w-10,-h-6],[-w/2,-h-50],[-w/2,48]];
+      let ok=null;for(const [dx,dy] of C){const b=[p[0]+dx,p[1]+dy,p[0]+dx+w,p[1]+dy+h];if(!hit(b)){ok=[dx,dy,b];break;}}
+      if(!ok&&t!=='ft'&&V.z<16){e.style.display='none';used.add(k);return;}
+      if(!ok){const b=[p[0]+10,p[1]-h/2,p[0]+10+w,p[1]+h/2];ok=[10,-h/2,b];}
+      boxes.push(ok[2]);used.add(k);e.style.transform=`translate(${p[0]+ok[0]}px,${p[1]+ok[1]}px)`;});}
+  for(const [k,e] of LAB)if(!used.has(k)){e.remove();LAB.delete(k);}}
+
+/* ========== 手势：拖、两指缩放、滚轮、双击 ========== */
+const PT=new Map();let PZ=null,ANI=null,TAPT=0;
+function zoomAt(z,sx,sy){z=Math.max(3,Math.min(19,z));const ll=toLL(sx,sy);V.z=z;const p=toScr(ll[0],ll[1]);const c=toLL(W/2+(p[0]-sx),H/2+(p[1]-sy));V.lat=c[0];V.lng=c[1];req();}
+const mp=$('map');
+mp.addEventListener('pointerdown',e=>{if(e.target.closest&&e.target.closest('.st,.cd'))return;mp.setPointerCapture(e.pointerId);PT.set(e.pointerId,[e.clientX,e.clientY]);ANI=null;if(PT.size===2){const a=[...PT.values()];PZ={d:Math.hypot(a[0][0]-a[1][0],a[0][1]-a[1][1]),z:V.z};}});
+mp.addEventListener('pointermove',e=>{const p=PT.get(e.pointerId);if(!p)return;const dx=e.clientX-p[0],dy=e.clientY-p[1];PT.set(e.pointerId,[e.clientX,e.clientY]);
+  if(PT.size===2&&PZ){const a=[...PT.values()],d=Math.hypot(a[0][0]-a[1][0],a[0][1]-a[1][1]);zoomAt(PZ.z+Math.log2(d/PZ.d),(a[0][0]+a[1][0])/2,(a[0][1]+a[1][1])/2);return;}
+  if(PT.size===1){const c=toLL(W/2-dx,H/2-dy);V.lat=c[0];V.lng=c[1];req();}});
+function pend(e){PT.delete(e.pointerId);if(PT.size<2)PZ=null;}
+mp.addEventListener('pointerup',e=>{pend(e);const n=Date.now();if(n-TAPT<300)zoomAt(V.z+1,e.clientX,e.clientY);TAPT=n;});
+mp.addEventListener('pointercancel',pend);
+mp.addEventListener('wheel',e=>{e.preventDefault();zoomAt(V.z-e.deltaY*0.0022,e.clientX,e.clientY);},{passive:false});
+function flyTo(lat,lng,z,ms){const s={lat:V.lat,lng:V.lng,z:V.z},t0=performance.now();ms=ms||700;ANI=1;
+  (function st(tm){if(!ANI)return;let k=Math.min(1,(tm-t0)/ms);k=k<.5?2*k*k:1-(-2*k+2)**2/2;V.lat=s.lat+(lat-s.lat)*k;V.lng=s.lng+(lng-s.lng)*k;V.z=s.z+(z-s.z)*k;draw();if(k<1)requestAnimationFrame(st);else ANI=null;})(t0);}
+function flyVis(lat,lng,z){const sh=$('sheet').classList.contains('show')?$('sheet').getBoundingClientRect().height:0,top=$('card').getBoundingClientRect().bottom;const off=(sh-top)/2;flyTo(uny(ly(lat,z)+off,z),lng,z);}
+function fitPts(pts,pad){if(!pts.length)return;let a=90,b=-90,c=180,d=-180;pts.forEach(p=>{a=Math.min(a,p[0]);b=Math.max(b,p[0]);c=Math.min(c,p[1]);d=Math.max(d,p[1]);});
+  const top=$('card').getBoundingClientRect().bottom+20,bot=$('sheet').classList.contains('show')?$('sheet').getBoundingClientRect().height+20:110;const hh=H-top-bot,ww=W-40;let z=18;
+  while(z>4&&(lx(d,z)-lx(c,z)>ww||ly(a,z)-ly(b,z)>hh))z-=0.25;const cyS=ly((a+b)/2,z)-(top-bot)/2;flyTo(uny(cyS,z),(c+d)/2,z);}
+$('bIn').onclick=()=>zoomAt(V.z+1,W/2,H/2);$('bOut').onclick=()=>zoomAt(V.z-1,W/2,H/2);
+$('bFit').onclick=()=>{if(PLAN)fitPts(sel().map(s=>[s.lat,s.lng]));};
+$('bLayer').onclick=()=>{UI.layer=UI.layer==='sat'?'st':'sat';saveUI();$('bLayer').textContent=UI.layer==='sat'?'🛰':'🗺';req();toast(UI.layer==='sat'?'卫星图':'街道图');};
+document.querySelectorAll('#pm button').forEach(b=>b.onclick=()=>{UI.pm=b.dataset.pm;saveUI();refresh();toast(UI.pm==='tx'?'显示：真实成交价（中位）':'显示：叫价（中位）');});
+
+/* ========== OpenStreetMap：找线路、站、附近公寓（免费、不用 key） ========== */
+const OP=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter'];
+async function overpass(q){let last;for(const u of OP){try{const r=await fetch(u,{method:'POST',body:'data='+encodeURIComponent(q),headers:{'Content-Type':'application/x-www-form-urlencoded'}});if(!r.ok)throw new Error('HTTP '+r.status);return await r.json();}catch(e){last=e;}}throw last||new Error('网络');}
+const REGIONS={kv:{n:'巴生谷（吉隆坡 / 雪兰莪）',b:[2.75,101.30,3.40,101.95]},pg:{n:'槟城',b:[5.20,100.15,5.60,100.55]},jb:{n:'新山',b:[1.38,103.55,1.65,103.95]}};
+async function findLines(bb){busy(1,'正在找这一带的火车线路…');try{
+  const j=await overpass(`[out:json][timeout:60];relation["type"="route"]["route"~"^(subway|light_rail|monorail|train|tram)$"](${bb.join(',')});out tags;`);
+  const seen=new Set();LINES=j.elements.map(r=>{const t=r.tags||{};return {id:r.id,name:t.name||t.ref||('线路 '+r.id),ref:t.ref||'',color:t.colour||'',from:t.from||'',to:t.to||'',route:t.route};})
+    .filter(l=>{const k=l.name;if(seen.has(k))return false;seen.add(k);return true;}).sort((a,b)=>a.name.localeCompare(b.name));
+  LS.set('rcm-lines',LINES);toast(`找到 ${LINES.length} 条线路`);}catch(e){toast('找不到线路：'+(e.message||e)+'。请检查网络。',4000);}finally{busy(0);}openSetup();}
+async function loadLine(id){busy(1,'正在读取站点…');try{
+  const j=await overpass(`[out:json][timeout:60];relation(${id})->.r;.r out body;node(r.r);out body;way(r.r);out center tags;`);
+  const rel=j.elements.find(e=>e.type==='relation'),N=new Map(),Wy=new Map();j.elements.forEach(e=>{if(e.type==='node')N.set(e.id,e);if(e.type==='way')Wy.set(e.id,e);});
+  const pick=re=>rel.members.filter(m=>re.test(m.role||'')).map(m=>{const e=m.type==='node'?N.get(m.ref):Wy.get(m.ref);if(!e)return null;const t=e.tags||{};const la=e.lat??(e.center&&e.center.lat),lo=e.lon??(e.center&&e.center.lon);if(la==null)return null;return {name:(t['name:en']||t.name||'').replace(/^(MRT|LRT|KTM|Monorel|Monorail)\s+/i,'').replace(/\s+(MRT|LRT)\s+station$/i,'').trim(),lat:la,lng:lo};}).filter(Boolean);
+  let st=pick(/^stop/);if(st.length<2)st=pick(/^platform/);
+  const S=[];st.forEach(s=>{if(!s.name)return;const l=S[S.length-1];if(l&&(l.name===s.name||hav(l.lat,l.lng,s.lat,s.lng)<150))return;S.push(s);});
+  if(S.length<2)throw new Error('这条线路在地图资料里没有站点');
+  const t=rel.tags||{};const L=LINES.find(x=>x.id===id)||{};
+  PLAN={lineId:id,lineName:t.name||L.name||'',color:t.colour||'#0D4A38',stations:S.map((s,i)=>({id:i,name:s.name,lat:s.lat,lng:s.lng})),from:0,to:S.length-1,condos:null};
+  savePlan();toast(`读到 ${S.length} 个站`);}catch(e){toast('读取失败：'+(e.message||e),4000);}finally{busy(0);}openSetup();refresh();}
+async function loadCondos(){if(!PLAN)return;const S=sel(),R=UI.radius;busy(1,`正在找每个站 ${R} 米内的公寓…`);try{
+  const line=S.map(s=>s.lat.toFixed(5)+','+s.lng.toFixed(5)).join(',');const ar=`(around:${R+60},${line})`;
+  const j=await overpass(`[out:json][timeout:90];(way["building"~"^(apartments|residential)$"]["name"]${ar};relation["building"~"^(apartments|residential)$"]["name"]${ar};way["residential"~"^(apartments|condominium)$"]["name"]${ar};way["landuse"="residential"]["name"~"(?i)(resid|kondo|condo|apartment|pangsapuri|suite|tower|heights|park|court|vista|avenue|regency|mansion|villa)"]${ar};);out center tags;`);
+  const G=new Map();j.elements.forEach(e=>{const t=e.tags||{};const nm=(t.name||'').trim();const c=e.center||e;if(!nm||c.lat==null)return;const k=normName(nm);if(!k||/^(blok|block|tower|menara)?\s*[a-z0-9]{0,2}$/.test(k))return;
+    const o=G.get(k)||{k,name:nm.replace(/\s*[-–]?\s*(blok|block|tower|menara)\s*[A-Z0-9]{1,2}$/i,''),la:0,lo:0,n:0};o.la+=c.lat;o.lo+=c.lon;o.n++;G.set(k,o);});
+  const out=[];for(const o of G.values()){const la=o.la/o.n,lo=o.lo/o.n;let best=null,bd=1e9;S.forEach(s=>{const d=hav(la,lo,s.lat,s.lng);if(d<bd){bd=d;best=s;}});
+    if(best&&bd<=R)out.push({k:o.k,name:o.name,short:o.name.length>22?o.name.replace(/\s*@.*$/,'').slice(0,22):o.name,lat:la,lng:lo,st:best.id,dist:Math.round(bd)});}
+  const keep=(PLAN.condos||[]).filter(c=>c.manual);PLAN.condos=out.concat(keep.filter(m=>!out.some(o=>o.k===m.k)));PLAN.radius=R;savePlan();
+  toast(`找到 ${out.length} 个公寓 / 住宅楼`,3000);}catch(e){toast('找公寓失败：'+(e.message||e),4000);}finally{busy(0);}
+  closeSheet();refresh();fitPts(sel().map(s=>[s.lat,s.lng]));}
+
+/* ========== 底部站名条 ========== */
+function stStats(sid){const L=condos().filter(c=>c.st===sid),v=L.map(pv).filter(x=>x>0);return {n:L.length,m:med(v),L};}
+function strip(){const E=$('strip');if(!PLAN){E.innerHTML=`<div class="sc ov" id="scGo"><b>☰ 选一条线路开始</b><small>任何城市、任何火车线</small></div>`;$('scGo').onclick=openSetup;return;}
+  const S=sel(),all=condos().map(pv).filter(x=>x>0);
+  E.innerHTML=`<div class="sc ov" data-ov="1"><b>全线概览</b><small>${condos().length} 个盘 · 中位 ${all.length?'RM'+Math.round(med(all)):'—'}</small></div>`+S.map(s=>{const t=stStats(s.id);return `<div class="sc${ACT&&ACT.st===s.id?' on':''}" data-st="${s.id}"><b>${esc(s.name)}</b><small>${t.n} 个盘 · ${t.m?'RM'+Math.round(t.m):'—'} psf</small></div>`;}).join('');
+  E.querySelectorAll('[data-st]').forEach(e=>e.onclick=()=>openStation(+e.dataset.st));E.querySelector('[data-ov]').onclick=openOverview;}
+
+/* ========== 底部面板 ========== */
+function sheet(t,html){$('shT').textContent=t;$('shB').innerHTML=html;$('sheet').classList.add('show');$('shB').scrollTop=0;}
+function closeSheet(){$('sheet').classList.remove('show');ACT=null;refresh(true);}
+$('shX').onclick=closeSheet;
+function gapTxt(d){if(!(d.ask>0&&d.tx>0))return '';const p=Math.round((d.tx-d.ask)/d.ask*100);return `成交比叫价${p<0?'低':'高'} ${Math.abs(p)}%`;}
+function yieldOf(d){const rent=((+d.rmin||0)+(+d.rmax||+d.rmin||0))/2,price=(+d.ask||+d.tx||0)*(+d.size||0);return rent&&price?rent*12/price*100:0;}
+function openOverview(){if(!PLAN){openSetup();return;}ACT=null;const S=sel();const rows=S.map(s=>({s,...stStats(s.id)}));
+  const vals=rows.filter(r=>r.m),ft=condos().find(c=>(DATA[c.k]||{}).feat),fv=ft?pv(ft):0;
+  const lo=vals.length?vals.reduce((a,b)=>a.m<b.m?a:b):null,hi=vals.length?vals.reduce((a,b)=>a.m>b.m?a:b):null;
+  const ys=condos().map(c=>yieldOf(DATA[c.k]||{})).filter(x=>x>0);
+  sheet('全线概览 · '+(PLAN.lineName||''),`
+   <div class="big"><div><small>全线中位 ${UI.pm==='tx'?'成交':'叫价'}</small><b>${vals.length?'RM'+Math.round(med(condos().map(pv))):'—'}</b><em>psf · ${condos().length} 个盘</em></div>
+   <div><small>平均租金回报</small><b>${ys.length?(ys.reduce((a,b)=>a+b,0)/ys.length).toFixed(1)+'%':'—'}</b><em>填了租金和面积的盘</em></div>
+   <div><small>最便宜的站</small><b style="font-size:15px">${lo?esc(lo.s.name):'—'}</b><em>${lo?'RM'+Math.round(lo.m)+' psf':''}</em></div>
+   <div><small>最贵的站</small><b style="font-size:15px">${hi?esc(hi.s.name):'—'}</b><em>${hi?'RM'+Math.round(hi.m)+' psf':''}</em></div></div>
+   ${ft&&fv?`<p class="hint">⭐ 主推 <b>${esc(ft.name)}</b>：RM${Math.round(fv)} psf，${(()=>{const m=stStats(ft.st).m;if(!m)return '';const p=Math.round((fv-m)/m*100);return `比本站中位${p<0?'便宜':'贵'} ${Math.abs(p)}%`;})()}</p>`:''}
+   <canvas class="chart" id="chart"></canvas>
+   <p class="hint">每条 = 一个站 ${UI.radius} 米内公寓的中位 psf，条下数字是盘数。金色虚线是你的主推盘。颜色和地图一样：青便宜、橙中等、红贵（按这条线自己的价格分三档）。</p>`);
+  setTimeout(()=>chart(rows,fv),30);refresh(true);fitPts(S.map(s=>[s.lat,s.lng]));}
+function chart(rows,fv){const c=$('chart');if(!c)return;const dpr=Math.min(2,devicePixelRatio||1),w=c.clientWidth,h=Math.max(220,Math.min(300,w*0.6));c.style.height=h+'px';c.width=w*dpr;c.height=h*dpr;const x=c.getContext('2d');x.scale(dpr,dpr);
+  const n=rows.length,pl=40,pr=10,pt=18,pb=96,bw=(w-pl-pr)/n,mx=Math.max(...rows.map(r=>r.m),fv,1)*1.12;
+  x.font='600 10px sans-serif';x.fillStyle='#6b756f';x.strokeStyle='#eee6d8';x.lineWidth=1;
+  for(let i=0;i<=4;i++){const y=pt+(h-pt-pb)*(1-i/4);x.beginPath();x.moveTo(pl,y);x.lineTo(w-pr,y);x.stroke();x.textAlign='right';x.fillText(Math.round(mx*i/4),pl-4,y+3);}
+  rows.forEach((r,i)=>{const bx=pl+i*bw+bw*0.18,ww=bw*0.64;if(r.m){const bh=(h-pt-pb)*r.m/mx,y=h-pb-bh;const t=!TIER[0]?0:r.m<TIER[0]?1:r.m<TIER[1]?2:3;
+      x.fillStyle=['#9aa39f','#2F7D5B','#BE8A2E','#9E3344'][t];x.beginPath();x.roundRect?x.roundRect(bx,y,ww,bh,[4,4,0,0]):x.rect(bx,y,ww,bh);x.fill();
+      x.fillStyle='#101B17';x.textAlign='center';x.font='800 10px sans-serif';if(bw>26)x.fillText(Math.round(r.m),bx+ww/2,y-4);}
+    x.save();x.translate(bx+ww/2+3,h-pb+5);x.rotate(-Math.PI/2);x.textAlign='right';x.fillStyle='#123449';x.font='700 10px sans-serif';const nm=r.s.name.length>17?r.s.name.slice(0,16)+'…':r.s.name;x.fillText(nm,0,0);x.restore();
+    if(r.m&&bw>18){x.fillStyle='#fff';x.font='800 9px sans-serif';x.textAlign='center';x.fillText(r.n+'盘',bx+ww/2,h-pb-5);}else{x.fillStyle='#9aa39f';x.font='700 9px sans-serif';x.textAlign='center';x.fillText(r.n?r.n+'盘':'无',bx+ww/2,h-pb-5);}});
+  if(fv){const y=h-pb-(h-pt-pb)*fv/mx;x.setLineDash([6,4]);x.strokeStyle='#B08A4F';x.lineWidth=2;x.beginPath();x.moveTo(pl,y);x.lineTo(w-pr,y);x.stroke();x.setLineDash([]);x.fillStyle='#7C5C24';x.font='800 10px sans-serif';x.textAlign='left';x.fillText('⭐ 主推 '+Math.round(fv),pl+4,y-4);}}
+function openStation(sid){const s=PLAN.stations.find(x=>x.id===sid);if(!s)return;ACT={st:sid};const t=stStats(sid);
+  const L=t.L.slice().sort((a,b)=>((DATA[b.k]||{}).feat?1:0)-((DATA[a.k]||{}).feat?1:0)||a.dist-b.dist);
+  sheet(s.name,`<div class="big"><div><small>${UI.radius} 米内</small><b>${t.n} 个盘</b><em>直线距离</em></div><div><small>中位 ${UI.pm==='tx'?'成交':'叫价'}</small><b>${t.m?'RM'+Math.round(t.m):'—'}</b><em>psf</em></div></div>
+   ${L.map(c=>{const d=DATA[c.k]||{},tr=tierOf(c),col=tr==='ft'?'#D9B772':['#9aa39f','#2F7D5B','#BE8A2E','#9E3344'][tr];const rent=+d.rmin||0;
+     return `<div class="li" data-c="${esc(c.k)}"><span class="dot" style="border-color:${col};background:${tr==='ft'?col:'#fff'}"></span><div class="nm"><b>${d.feat?'⭐ ':''}${esc(c.name)}</b><small>${c.dist} 米 · 走路约 ${walkMin(c.dist)} 分钟${rent?' · 起租 RM'+rent:''}</small></div>
+     <div class="pv">${+d.ask?'RM'+Math.round(d.ask):'—'}<small>${+d.tx?'成交 RM'+Math.round(d.tx)+(d.txn?' · '+d.txn+'笔':''):'叫价 psf'}</small></div></div>`;}).join('')||'<p class="hint">这个站附近在地图资料里没找到公寓。可以按下面的按钮自己加。</p>'}
+   <div class="row" style="margin-top:10px"><button id="addC">＋ 在地图上加一个公寓</button></div>`);
+  $('shB').querySelectorAll('[data-c]').forEach(e=>e.onclick=()=>openCondo(e.dataset.c));$('addC').onclick=()=>startAdd(sid);
+  refresh(true);setTimeout(()=>flyVis(s.lat,s.lng,Math.max(15.6,V.z)),30);}
+function openCondo(k){const c=PLAN.condos.find(x=>x.k===k);if(!c)return;ACT={c:k,st:c.st};const d=dOf(c),s=PLAN.stations.find(x=>x.id===c.st)||{};
+  const y=yieldOf(d),tr=tierOf(c),tname=tr==='ft'?'⭐ 主推':['未分档','入门','中位','高价'][tr];
+  sheet(c.name,`<p class="hint" style="margin-top:0"><span class="tag">${esc(s.name||'')}</span>${c.dist} 米 · 走路约 ${walkMin(c.dist)} 分钟 · ${tname}${d.demo?' · <b style="color:#b45309">示意数字，不是真实价格</b>':''}</p>
+   <div class="big"><div><small>叫价中位</small><b>${+d.ask?'RM'+Math.round(d.ask):'—'}</b><em>psf${+d.ask&&+d.size?' · 约 '+fmtRM(d.ask*d.size):''}</em></div>
+   <div><small>真实成交中位</small><b>${+d.tx?'RM'+Math.round(d.tx):'—'}</b><em>${+d.tx?'psf · '+(d.txn||'?')+' 笔':'暂无成交 / 新盘'}</em></div>
+   <div><small>月租</small><b>${+d.rmin?'RM'+d.rmin+(+d.rmax?'–'+d.rmax:''):'—'}</b><em>${y?'回报率约 '+y.toFixed(1)+'%':'填面积可算回报率'}</em></div>
+   <div><small>叫价 vs 成交</small><b style="font-size:15px">${gapTxt(d)||'—'}</b><em>${d.tenure?esc(d.tenure):''}${d.yr?' · '+d.yr+' 年':''}${d.units?' · '+d.units+' 户':''}</em></div></div>
+   <div class="row"><button class="${d.feat?'on':'gold'}" id="cFt">${d.feat?'⭐ 已是主推（再按取消）':'⭐ 设为主推'}</button><a class="btn" href="https://www.iproperty.com.my/sale/?q=${encodeURIComponent(c.name)}" target="_blank" rel="noopener">More · iProperty ↗</a></div>
+   <details><summary>✏️ 改这个盘的资料</summary><div class="fm">
+    <label>叫价 psf</label><input type="number" inputmode="decimal" id="fAsk" value="${esc(d.ask||'')}">
+    <label>成交 psf</label><input type="number" inputmode="decimal" id="fTx" value="${esc(d.tx||'')}">
+    <label>成交笔数</label><input type="number" inputmode="numeric" id="fTxn" value="${esc(d.txn||'')}">
+    <label>月租 最低</label><input type="number" inputmode="numeric" id="fRmin" value="${esc(d.rmin||'')}">
+    <label>月租 最高</label><input type="number" inputmode="numeric" id="fRmax" value="${esc(d.rmax||'')}">
+    <label>常见面积 sqft</label><input type="number" inputmode="numeric" id="fSize" value="${esc(d.size||'')}">
+    <label>户数</label><input type="number" inputmode="numeric" id="fUnits" value="${esc(d.units||'')}">
+    <label>落成年份</label><input type="number" inputmode="numeric" id="fYr" value="${esc(d.yr||'')}">
+    <label>产权</label><input type="text" id="fTen" value="${esc(d.tenure||'')}" placeholder="Freehold / Leasehold / 马来保留地…">
+    <label>地图短名</label><input type="text" id="fShort" value="${esc(c.short||'')}">
+   </div><div class="row"><button class="pri" id="cSave">储存</button>${c.manual?'<button id="cDel">删除这个盘</button>':'<button id="cHide">从图上拿掉</button>'}</div></details>`);
+  $('cFt').onclick=()=>{const was=!!d.feat;PLAN.condos.forEach(x=>{if(DATA[x.k])DATA[x.k].feat=false;});d.feat=!was;saveData();openCondo(k);};
+  $('cSave').onclick=()=>{const n=id=>{const v=$(id).value.trim();return v===''?'':+v;};Object.assign(d,{ask:n('fAsk'),tx:n('fTx'),txn:n('fTxn'),rmin:n('fRmin'),rmax:n('fRmax'),size:n('fSize'),units:n('fUnits'),yr:n('fYr'),tenure:$('fTen').value.trim(),demo:false});
+    c.short=$('fShort').value.trim()||c.short;saveData();savePlan();toast('已储存');openCondo(k);};
+  const rm=()=>{PLAN.condos=PLAN.condos.filter(x=>x.k!==k);savePlan();closeSheet();toast('已拿掉');};if($('cDel'))$('cDel').onclick=rm;if($('cHide'))$('cHide').onclick=rm;
+  refresh(true);setTimeout(()=>flyVis(c.lat,c.lng,Math.max(16,V.z)),30);}
+
+/* 自己加公寓：点地图位置 */
+let ADD=null;
+function startAdd(sid){ADD={sid};closeSheet();toast('请在地图上点公寓的位置',4000);}
+mp.addEventListener('click',e=>{if(!ADD||!PLAN)return;const ll=toLL(e.clientX,e.clientY);const sid=ADD.sid;ADD=null;
+  sheet('加一个公寓',`<div class="fm"><label>名字</label><input id="aN" placeholder="例如 The Netizen"></div><div class="row"><button class="pri" id="aOk">加进去</button></div>`);$('aN').focus();
+  $('aOk').onclick=()=>{const nm=$('aN').value.trim();if(!nm){toast('请写名字');return;}const s=PLAN.stations.find(x=>x.id===sid)||PLAN.stations[0];
+    const k=normName(nm)||('m'+Date.now());PLAN.condos=PLAN.condos||[];PLAN.condos.push({k,name:nm,short:nm.slice(0,22),lat:ll[0],lng:ll[1],st:s.id,dist:Math.round(hav(ll[0],ll[1],s.lat,s.lng)),manual:true});savePlan();openCondo(k);};});
+
+/* ========== 设定：地区 → 线路 → 从哪站到哪站 → 半径 ========== */
+function openSetup(){LINES=LINES.length?LINES:LS.get('rcm-lines',[]);const st=PLAN?PLAN.stations:[];
+  sheet('选择路线',`
+   <p class="hint" style="margin-top:0">① 先找线路：选一个地区，或把地图移到你要的城市，按「用目前地图范围」。</p>
+   <div class="row">${Object.entries(REGIONS).map(([k,r])=>`<button data-rg="${k}">${r.n}</button>`).join('')}<button data-rg="view">📍 用目前地图范围</button></div>
+   <div class="fm" style="margin-top:10px"><label>② 线路</label><select id="sLine"><option value="">${LINES.length?'— 选一条 —':'先按上面找线路'}</option>${LINES.map(l=>`<option value="${l.id}"${PLAN&&PLAN.lineId===l.id?' selected':''}>${esc(l.name)}</option>`).join('')}</select>
+   ${st.length?`<label>③ 从</label><select id="sFrom">${st.map((s,i)=>`<option value="${i}"${PLAN.from===i?' selected':''}>${esc(s.name)}</option>`).join('')}</select>
+   <label>到</label><select id="sTo">${st.map((s,i)=>`<option value="${i}"${PLAN.to===i?' selected':''}>${esc(s.name)}</option>`).join('')}</select>`:''}
+   <label>④ 半径</label><select id="sRad">${[300,500,800,1000].map(v=>`<option value="${v}"${UI.radius===v?' selected':''}>${v} 米</option>`).join('')}</select></div>
+   ${st.length?`<button class="pri" id="sGo" style="width:100%">🔎 找每个站附近的公寓</button>`:''}
+   <p class="hint">线路、站点、楼名来自免费的 OpenStreetMap，不用 API key。价格要自己填，或用 Excel 整理后导入。</p>
+   <details><summary>📄 价格资料：导入 / 导出</summary>
+    <p class="hint">按「导出表格」得到一份 CSV，里面已经列好所有公寓名字。用 Excel 填叫价、成交价、月租后，按「导入表格」就更新。来源建议：叫价取 iProperty / PropertyGuru 中位；成交价取 NAPIC 开放数据或 Brickz。</p>
+    <div class="row"><button id="dExp">⬇ 导出表格</button><button id="dImp">⬆ 导入表格</button><button id="dDemo">填入示意数字（演示用）</button><button id="dClr">清除全部价格</button></div></details>`);
+  document.querySelectorAll('[data-rg]').forEach(b=>b.onclick=()=>{const k=b.dataset.rg;if(k==='view'){const a=toLL(0,H),c=toLL(W,0);findLines([a[0],a[1],c[0],c[1]].map(v=>+v.toFixed(4)));}else{const r=REGIONS[k];V.lat=(r.b[0]+r.b[2])/2;V.lng=(r.b[1]+r.b[3])/2;V.z=10.5;req();findLines(r.b);}});
+  $('sLine').onchange=e=>{if(e.target.value)loadLine(+e.target.value);};
+  if($('sFrom'))$('sFrom').onchange=e=>{PLAN.from=+e.target.value;savePlan();refresh();};
+  if($('sTo'))$('sTo').onchange=e=>{PLAN.to=+e.target.value;savePlan();refresh();};
+  $('sRad').onchange=e=>{UI.radius=+e.target.value;saveUI();req();};
+  if($('sGo'))$('sGo').onclick=loadCondos;
+  $('dExp').onclick=exportCSV;$('dImp').onclick=()=>$('fileIn').click();$('dDemo').onclick=demoFill;$('dClr').onclick=()=>{if(!confirmTwice('dClr'))return;DATA={};saveData();refresh();toast('已清除');};}
+$('bSet').onclick=openSetup;
+const CT={};function confirmTwice(k){if(CT[k]&&Date.now()-CT[k]<3000){CT[k]=0;return true;}CT[k]=Date.now();toast('再按一次确定');return false;}
+
+/* ========== CSV 导入 / 导出 ========== */
+const COLS=['name','station','ask_psf','tx_psf','tx_count','rent_min','rent_max','size_sqft','units','year','tenure','featured','lat','lng'];
+const MAPK={ask_psf:'ask',tx_psf:'tx',tx_count:'txn',rent_min:'rmin',rent_max:'rmax',size_sqft:'size',units:'units',year:'yr',tenure:'tenure'};
+function csvCell(v){v=v==null?'':String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
+function exportCSV(){if(!PLAN||!PLAN.condos){toast('先选线路、找公寓');return;}const rows=[COLS.join(',')];
+  condos().forEach(c=>{const d=DATA[c.k]||{},s=PLAN.stations.find(x=>x.id===c.st)||{};rows.push([c.name,s.name,d.ask,d.tx,d.txn,d.rmin,d.rmax,d.size,d.units,d.yr,d.tenure,d.feat?1:'',c.lat.toFixed(6),c.lng.toFixed(6)].map(csvCell).join(','));});
+  const blob=new Blob(['﻿'+rows.join('\n')],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=(PLAN.lineName||'line').replace(/[^\w一-龥]+/g,'_')+'-公寓价格.csv';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);toast('表格已下载');}
+function parseCSV(t){const out=[];let row=[],f='',q=false;for(let i=0;i<t.length;i++){const ch=t[i];if(q){if(ch==='"'){if(t[i+1]==='"'){f+='"';i++;}else q=false;}else f+=ch;}else if(ch==='"')q=true;else if(ch===','){row.push(f);f='';}else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&t[i+1]==='\n')i++;row.push(f);out.push(row);row=[];f='';}else f+=ch;}if(f||row.length){row.push(f);out.push(row);}return out.filter(r=>r.some(x=>x.trim()));}
+$('fileIn').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const t=(await f.text()).replace(/^﻿/,'');const R=parseCSV(t);if(R.length<2){toast('表格是空的');return;}
+  const hd=R[0].map(h=>h.trim().toLowerCase());const ix=k=>hd.indexOf(k);if(ix('name')<0){toast('表格要有 name 这一栏');return;}let up=0,add=0,miss=0;
+  R.slice(1).forEach(r=>{const nm=(r[ix('name')]||'').trim();if(!nm)return;const k=normName(nm);let c=PLAN&&PLAN.condos&&PLAN.condos.find(x=>x.k===k);
+    if(!c&&PLAN&&ix('lat')>=0&&+r[ix('lat')]){const la=+r[ix('lat')],lo=+r[ix('lng')];let best=null,bd=1e9;PLAN.stations.forEach(s=>{const d=hav(la,lo,s.lat,s.lng);if(d<bd){bd=d;best=s;}});
+      if(best){c={k,name:nm,short:nm.slice(0,22),lat:la,lng:lo,st:best.id,dist:Math.round(bd),manual:true};PLAN.condos.push(c);add++;}}
+    if(!c){miss++;return;}const d=DATA[k]||(DATA[k]={});for(const [col,key] of Object.entries(MAPK)){const i=ix(col);if(i>=0&&r[i]!==undefined&&r[i].trim()!=='')d[key]=key==='tenure'?r[i].trim():+r[i].replace(/[^\d.]/g,'');}
+    if(ix('featured')>=0)d.feat=/^(1|y|yes|true|是|⭐)$/i.test((r[ix('featured')]||'').trim());d.demo=false;up++;});
+  saveData();savePlan();refresh();toast(`更新 ${up} 个盘${add?'，新加 '+add+' 个':''}${miss?'，'+miss+' 个对不上名字':''}`,4000);};
+/* 示意数字：只为了看效果，标明"示意" */
+function demoFill(){if(!PLAN||!PLAN.condos){toast('先找公寓');return;}const S=sel();let i=0;condos().forEach(c=>{const d=DATA[c.k]||(DATA[c.k]={});if(+d.ask&&!d.demo)return;const si=S.findIndex(s=>s.id===c.st),base=720-si*22+((i++*37)%120)-60;
+  Object.assign(d,{ask:Math.round(base),tx:Math.random()<0.75?Math.round(base*(0.86+Math.random()*0.1)):'',txn:Math.round(3+Math.random()*20),rmin:Math.round(base*1.9/10)*10,rmax:Math.round(base*2.6/10)*10,size:850,demo:true});});
+  saveData();refresh();toast('已填入示意数字（会标「示意」，不是真实价格）',3500);}
+
+/* ========== 刷新 ========== */
+function refresh(keepSheet){calcTiers();strip();document.querySelectorAll('#pm button').forEach(b=>b.classList.toggle('on',b.dataset.pm===UI.pm));
+  $('ttl').textContent=PLAN?`${PLAN.lineName}${PLAN.stations.length?'：'+sel()[0].name+' → '+sel()[sel().length-1].name:''}`:'沿线公寓比价';
+  $('kick').textContent=`RAIL CORRIDOR · ${UI.radius} M COLLECTION`;$('bLayer').textContent=UI.layer==='sat'?'🛰':'🗺';req();}
+addEventListener('resize',resize);resize();
+if(PLAN&&PLAN.stations&&PLAN.stations.length){refresh();const S=sel();const ft=condos().find(c=>(DATA[c.k]||{}).feat);
+  if(ft){V.lat=ft.lat;V.lng=ft.lng;V.z=15;req();}else{V.lat=S[0].lat;V.lng=S[0].lng;V.z=12;setTimeout(()=>fitPts(S.map(s=>[s.lat,s.lng])),50);}}
+else{refresh();setTimeout(openSetup,300);}
+window.__rcm={PLAN:()=>PLAN,DATA:()=>DATA,V};
+</script>
+</body>
+</html>
