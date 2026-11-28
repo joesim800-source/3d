@@ -610,7 +610,7 @@ const GK='prop3d-gmkey';function gKey(){try{return localStorage.getItem(GK)||'';
 let G3L=null;
 function g3Load(key){if(G3L)return G3L;G3L=new Promise((res,rej)=>{window.__g3cb=()=>{try{google.maps.importLibrary('maps3d').then(res,rej);}catch(e){rej(e);}};
   window.gm_authFailure=()=>{rej(new Error('Google 不接受这把 key'));toast('Google 不接受这把 key，请检查',4000);};
-  const sc=document.createElement('script');sc.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=weekly&loading=async&callback=__g3cb`;sc.async=true;sc.onerror=()=>rej(new Error('网络'));document.head.appendChild(sc);
+  const sc=document.createElement('script');sc.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=weekly&language=en&region=MY&loading=async&callback=__g3cb`;sc.async=true;sc.onerror=()=>rej(new Error('网络'));document.head.appendChild(sc);
   setTimeout(()=>rej(new Error('太久没反应')),20000);});G3L.catch(()=>{G3L=null;});return G3L;}
 function g3KeySheet(){sheet('📷 真实3D（Google）',`<p class="hint" style="margin-top:0">真实3D 用 Google 的真实楼房图，需要一把 Google Maps key。<b>如果你在 Prop 3D 已经放过，这里会自动用同一把。</b></p>
   <label style="font-weight:700">Google Maps key</label><input id="g3K" type="password" autocomplete="off" placeholder="AIza…" style="width:100%;padding:10px;font-size:16px;margin:6px 0 10px;border:1px solid #ccc;border-radius:10px">
