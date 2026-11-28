@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>沿线公寓比价 · Rail Corridor</title>
 <style>
@@ -297,17 +297,21 @@ function zoomAt(z,sx,sy){const a=toLL(sx,sy);setZ(z);camSetup();const b=toLL(sx,
 function panBy(dx,dy){camSetup();const a=toLL(W/2,H/2),b=toLL(W/2-dx,H/2-dy);V.lat+=b[0]-a[0];V.lng+=b[1]-a[1];req();}
 const mp=$('map');
 mp.addEventListener('contextmenu',e=>e.preventDefault());
-mp.addEventListener('pointerdown',e=>{if(e.target.closest&&e.target.closest('.st,.cd,.lm,.lnp'))return;mp.setPointerCapture(e.pointerId);PT.set(e.pointerId,[e.clientX,e.clientY]);ANI=null;
+let GMOV=false,MAXP=0,G0=null;
+mp.addEventListener('pointerdown',e=>{if(!PT.size){GMOV=false;MAXP=0;G0=[e.clientX,e.clientY];}const onLab=e.target.closest&&e.target.closest('.st,.cd,.lm,.lnp');if(!onLab){try{mp.setPointerCapture(e.pointerId);}catch(_){}}PT.set(e.pointerId,[e.clientX,e.clientY]);MAXP=Math.max(MAXP,PT.size);ANI=null;
   MD=(e.button===2||e.ctrlKey)?'rot':null;
   if(PT.size===2){const a=[...PT.values()];PZ={d:Math.hypot(a[0][0]-a[1][0],a[0][1]-a[1][1]),ang:Math.atan2(a[1][1]-a[0][1],a[1][0]-a[0][0]),z:V.z,b:V.bear,p:V.pitch,my:(a[0][1]+a[1][1])/2,cx:(a[0][0]+a[1][0])/2,cy:(a[0][1]+a[1][1])/2};}});
-mp.addEventListener('pointermove',e=>{const p=PT.get(e.pointerId);if(!p)return;const dx=e.clientX-p[0],dy=e.clientY-p[1];PT.set(e.pointerId,[e.clientX,e.clientY]);
+mp.addEventListener('pointermove',e=>{const p=PT.get(e.pointerId);if(!p)return;if(!GMOV&&(PT.size>1||Math.hypot(e.clientX-G0[0],e.clientY-G0[1])>8))GMOV=true;const dx=e.clientX-p[0],dy=e.clientY-p[1];PT.set(e.pointerId,[e.clientX,e.clientY]);
   if(PT.size===2&&PZ){const a=[...PT.values()],d=Math.hypot(a[0][0]-a[1][0],a[0][1]-a[1][1]),ang=Math.atan2(a[1][1]-a[0][1],a[1][0]-a[0][0]),my=(a[0][1]+a[1][1])/2,cx=(a[0][0]+a[1][0])/2,cy=(a[0][1]+a[1][1])/2;
     const dz=Math.log2(d/PZ.d),dang=(ang-PZ.ang)*180/Math.PI;const tilt=Math.abs(dz)<0.06&&Math.abs(dang)<4&&Math.abs(my-PZ.my)>12;
     if(tilt&&UI.d3){V.pitch=Math.max(0,Math.min(62,PZ.p-(my-PZ.my)*0.35));req();return;}
     if(UI.d3)V.bear=PZ.b-dang;zoomAt(PZ.z+dz,cx,cy);panBy(cx-PZ.cx,cy-PZ.cy);PZ.cx=cx;PZ.cy=cy;return;}
   if(PT.size===1){if(MD==='rot'){if(!UI.d3)return;V.bear-=dx*0.3;V.pitch=Math.max(0,Math.min(62,V.pitch-dy*0.3));req();return;}panBy(dx,dy);}});
 function pend(e){PT.delete(e.pointerId);if(PT.size<2)PZ=null;}
-mp.addEventListener('pointerup',e=>{pend(e);const n=Date.now();if(n-TAPT<300)zoomAt(V.z+1,e.clientX,e.clientY);TAPT=n;});
+mp.addEventListener('pointerup',e=>{pend(e);if(PT.size)return;/* 只有单指轻点两下才放大，两指放开不会乱跳 */if(GMOV||MAXP>1){TAPT=0;return;}const n=Date.now();if(n-TAPT<300){zoomAt(V.z+1,e.clientX,e.clientY);TAPT=0;}else TAPT=n;});
+$('labs').addEventListener('click',e=>{if(GMOV){e.stopPropagation();e.preventDefault();}},true);
+mp.addEventListener('click',e=>{if(GMOV)e.stopImmediatePropagation();},true);
+['gesturestart','gesturechange','gestureend'].forEach(t=>document.addEventListener(t,e=>e.preventDefault(),{passive:false}));
 mp.addEventListener('pointercancel',pend);
 mp.addEventListener('wheel',e=>{e.preventDefault();zoomAt(V.z-e.deltaY*0.0022,e.clientX,e.clientY);},{passive:false});
 function flyTo(lat,lng,z,ms,pitch,bear){const s={lat:V.lat,lng:V.lng,z:V.z,p:V.pitch,b:V.bear},t0=performance.now();ms=ms||700;ANI=1;const tp=pitch==null?V.pitch:pitch,tb=bear==null?V.bear:bear;
@@ -703,9 +707,11 @@ async function loadNet(rk){const G=groups().filter(g=>g.kind!=='长途');if(!G.l
       const P=[];let la=null,lo=null;e.geometry.forEach((q,i)=>{if(i&&i<e.geometry.length-1&&la!=null&&hav(la,lo,q.lat,q.lon)<30)return;la=q.lat;lo=q.lon;P.push(+q.lat.toFixed(5),+q.lon.toFixed(5));});if(P.length>=4)cur.ways.push(P);}
     const out=[...by.values()].filter(g=>g.ways.length);out.forEach(g=>{let best=g.ways[0];g.ways.forEach(w=>{if(w.length>best.length)best=w;});const m=Math.floor(best.length/4)*2;g.mid=[best[m],best[m+1]];});
     NET={rk,lines:out};LS.set('rcm-net',NET);req();}catch(e){toast('路线颜色读不到：'+(e.message||e),3500);}}
+function wayBB(w){let a=90,b=-90,c=180,d=-180;for(let i=0;i<w.length;i+=2){a=Math.min(a,w[i]);b=Math.max(b,w[i]);c=Math.min(c,w[i+1]);d=Math.max(d,w[i+1]);}return [a,b,c,d];}
+function netBox(){if(V.pitch>20)return null;const P=[toLL(0,0),toLL(W,0),toLL(0,H),toLL(W,H)];if(P.some(p=>!p))return null;const la=P.map(p=>p[0]),lo=P.map(p=>p[1]),m=0.01;return [Math.min(...la)-m,Math.max(...la)+m,Math.min(...lo)-m,Math.max(...lo)+m];}
 function drawNet(){if(!NET||RT.on||V.z<8.5)return;const sat=UI.layer==='sat',step=V.z<11?3:1;g.lineJoin='round';g.lineCap='round';
-  for(const L of NET.lines){const on=PLAN&&L.ids.includes(PLAN.lineId);
-    for(const w of L.ways){const P=[];for(let i=0;i<w.length;i+=2*step)P.push(toScr(w[i],w[i+1]));const n=w.length;if((n/2-1)%step)P.push(toScr(w[n-2],w[n-1]));
+  const vb=netBox();for(const L of NET.lines){const on=PLAN&&L.ids.includes(PLAN.lineId);
+    for(const w of L.ways){if(vb){const b=w.bb||(w.bb=wayBB(w));if(b[1]<vb[0]||b[0]>vb[1]||b[3]<vb[2]||b[2]>vb[3])continue;}const P=[];for(let i=0;i<w.length;i+=2*step)P.push(toScr(w[i],w[i+1]));const n=w.length;if((n/2-1)%step)P.push(toScr(w[n-2],w[n-1]));
       pathTo(P);g.globalAlpha=on?1:0.9;g.strokeStyle=sat?'rgba(255,255,255,.9)':'#fff';g.lineWidth=on?7:5.5;g.stroke();g.strokeStyle=L.col;g.lineWidth=on?4.5:3.2;g.stroke();g.globalAlpha=1;}}}
 const LNE=new Map();
 function placeNet(){const show=NET&&!RT.on&&V.z>=9&&V.z<14.5;const used=new Set();
