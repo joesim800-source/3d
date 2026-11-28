@@ -115,7 +115,7 @@ body.routing .cd,body.routing .lm,body.routing #strip{display:none!important}
     <div class="leg" id="leg"></div>
     <div class="row">
       <div class="seg" id="pm"><button data-pm="ask">叫价</button><button data-pm="tx">成交</button></div>
-      <button class="pri" id="bSet">☰ 路线</button>
+      <button class="pri" id="bSet">☰ 路线</button><button class="pri" id="bSave" style="background:#b45309;border-color:#b45309">💾</button>
     </div>
   </div>
 </div>
@@ -144,10 +144,10 @@ const normName=s=>String(s||'').toLowerCase().replace(/\b(blok|block|tower|menar
 
 /* ========== 状态 ========== */
 let PLAN=LS.get('rcm-plan',null);         // 选好的线路方案
-let DATA=LS.get('rcm-data',{});           // 各公寓的价格资料（按名字）
+let DATA=LS.get('rcm-data',{});let PJS=LS.get('rcm-projects',[]),PJT=0;           // 各公寓的价格资料（按名字）
 let UI=LS.get('rcm-ui',{pm:'ask',layer:'sat',radius:500});
 let LINES=[];                              // 找到的线路列表
-const saveUI=()=>LS.set('rcm-ui',UI),savePlan=()=>LS.set('rcm-plan',PLAN),saveData=()=>LS.set('rcm-data',DATA);
+let saveUI=()=>LS.set('rcm-ui',UI),savePlan=()=>{LS.set('rcm-plan',PLAN);pjAuto();},saveData=()=>{LS.set('rcm-data',DATA);pjAuto();};
 const dOf=c=>DATA[c.k]||(DATA[c.k]={});
 const pv=c=>{const d=DATA[c.k]||{};return +(UI.pm==='tx'?d.tx:d.ask)||0;};
 
@@ -653,7 +653,7 @@ $('rbR').onclick=()=>{if(RT.on)playRoute(RT.rec);};$('rbX').onclick=()=>{stopRou
 /* ========== 刷新 ========== */
 function refresh(keepSheet){calcTiers();strip();document.querySelectorAll('#pm button').forEach(b=>b.classList.toggle('on',b.dataset.pm===UI.pm));
   $('ttl').textContent=PLAN?`${PLAN.lineName}${PLAN.stations.length?'：'+sel()[0].name+' → '+sel()[sel().length-1].name:''}`:'沿线公寓比价';
-  $('kick').textContent=`RAIL CORRIDOR · ${UI.radius} M COLLECTION`;mapUI();req();}
+  $('kick').textContent=(UI.proj&&pjGet(UI.proj)?'📁 '+pjGet(UI.proj).name+' · ':'')+`${UI.radius} M`;mapUI();req();}
 addEventListener('resize',resize);resize();
 if(PLAN&&PLAN.stations&&PLAN.stations.length){refresh();const S=sel();const ft=condos().find(c=>(DATA[c.k]||{}).feat);
   if(ft){V.lat=ft.lat;V.lng=ft.lng;V.z=15;req();}else{V.lat=S[0].lat;V.lng=S[0].lng;V.z=12;setTimeout(()=>fitPts(S.map(s=>[s.lat,s.lng])),50);}}
@@ -793,6 +793,42 @@ async function webAll(){if(needKey())return;const L=condos().filter(c=>{const d=
     show();if(i<L.length-1)await new Promise(r=>setTimeout(r,6500));}
   if($('waP'))$('waP').textContent=`查完 ${R.length} 个。打勾的是找到资料的，可以按来源核对后再填进去。`;show();
   if($('waOk'))$('waOk').onclick=()=>{let n=0;document.querySelectorAll('[data-wa]').forEach(b=>{if(b.checked){const x=R[+b.dataset.wa];if(x&&x.r){webApply(x.c,x.r);n++;}}});refresh();toast(`已填进去 ${n} 个`);openOverview();};}
+
+
+/* ===== 💾 储存项目：取名字，退出也不会不见（本机 + 备份文件） ===== */
+const IDB={db:null,open(){return this.db||(this.db=new Promise((res,rej)=>{try{const r=indexedDB.open('rcm-kv',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);}catch(e){rej(e);}}));},
+  async put(k,v){try{const db=await this.open();db.transaction('kv','readwrite').objectStore('kv').put(v,k);}catch(e){}},
+  async get(k){try{const db=await this.open();return await new Promise(res=>{const q=db.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>res(null);});}catch(e){return null;}}};
+function pjGet(id){return PJS.find(p=>p.id===id);}
+function pjWrite(){LS.set('rcm-projects',PJS);IDB.put('rcm-projects',JSON.stringify(PJS));}
+function pjSnap(){const D={};(PLAN&&PLAN.condos||[]).forEach(c=>{if(DATA[c.k])D[c.k]=DATA[c.k];});return {plan:JSON.parse(JSON.stringify(PLAN)),data:JSON.parse(JSON.stringify(D)),ui:{radius:UI.radius,layer:UI.layer,d3:UI.d3,pm:UI.pm,rg:UI.rg},view:{lat:V.lat,lng:V.lng,z:V.z}};}
+function pjAuto(){if(!UI.proj||!pjGet(UI.proj)||!PLAN)return;clearTimeout(PJT);PJT=setTimeout(()=>{const p=pjGet(UI.proj);if(!p)return;Object.assign(p,pjSnap(),{at:Date.now()});pjWrite();},800);}
+function pjDefName(){if(!PLAN)return '';const S=sel();const ft=condos().find(c=>(DATA[c.k]||{}).feat);return `${PLAN.lineName||'线路'} ${S.length?S[0].name+'→'+S[S.length-1].name:''}${ft?' for '+(ft.short||ft.name):''}`.trim();}
+function pjSaveAs(name,asNew){if(!PLAN){toast('先选一条线路');return;}name=(name||'').trim()||pjDefName();let p=!asNew&&UI.proj&&pjGet(UI.proj);
+  if(p){p.name=name;}else{p={id:'p'+Date.now(),name,created:Date.now()};PJS.unshift(p);}Object.assign(p,pjSnap(),{at:Date.now()});UI.proj=p.id;saveUI();pjWrite();refresh(true);toast('✅ 已储存：'+name,3000);}
+function pjOpen(id){const p=pjGet(id);if(!p)return;PLAN=p.plan;Object.assign(DATA,p.data||{});Object.assign(UI,p.ui||{});UI.proj=id;LS.set('rcm-plan',PLAN);LS.set('rcm-data',DATA);saveUI();
+  closeSheet();refresh();if(p.view){V.lat=p.view.lat;V.lng=p.view.lng;V.z=p.view.z;req();}else fitPts(sel().map(s=>[s.lat,s.lng]));toast('📁 打开了：'+p.name,2500);}
+function pjTime(t){const d=new Date(t);return d.toLocaleDateString('zh-CN')+' '+d.toTimeString().slice(0,5);}
+function openSave(){const cur=UI.proj&&pjGet(UI.proj);
+  sheet('💾 储存 / 打开项目',`${PLAN?`<label style="font-weight:800">名字（这个是做什么的、for 哪个 condo）</label>
+   <input id="pjN" value="${esc(cur?cur.name:pjDefName())}" placeholder="例如：Kajang Line TRX→Kajang for The Netizen" style="width:100%;padding:10px;font-size:16px;border:1px solid #ccc;border-radius:10px;margin:6px 0">
+   <div class="row"><button class="pri" id="pjS">💾 ${cur?'储存（更新这个项目）':'储存'}</button>${cur?'<button id="pjS2">＋ 另存成新的</button>':''}</div>
+   <p class="hint">${cur?`✅ 现在打开的是「<b>${esc(cur.name)}</b>」，之后改的东西会<b>自动储存</b>进去（上次 ${pjTime(cur.at)}）。`:'储存以后，之后改的价钱、楼盘都会自动储存进这个项目。'}</p>`:'<p class="hint">先选一条线路，才可以储存。</p>'}
+   <p style="font-weight:800;margin:14px 0 6px">📁 已储存的项目（${PJS.length}）</p>
+   ${PJS.map(p=>`<div class="li"><button data-po="${p.id}" class="${p.id===UI.proj?'pri':''}">${p.id===UI.proj?'✔ 打开中':'▶ 打开'}</button><div class="nm"><b>${esc(p.name)}</b><small>${esc(p.plan&&p.plan.lineName||'')} · ${(p.plan&&p.plan.condos||[]).length} 个盘 · ${pjTime(p.at)}</small></div><button data-pr="${p.id}">✏️</button><button data-pd="${p.id}">🗑</button></div>`).join('')||'<p class="hint">还没有储存的项目。</p>'}
+   <details style="margin-top:12px"><summary>🛟 备份到文件 / 从文件还原</summary><p class="hint">换手机、或者清掉浏览器资料之前，先下载备份文件。之后按「还原」选这个文件，全部项目就回来。</p>
+    <div class="row"><button id="pjB">⬇ 下载备份文件</button><button id="pjR">⬆ 从文件还原</button></div></details>`);
+  if($('pjS'))$('pjS').onclick=()=>{pjSaveAs($('pjN').value,false);openSave();};
+  if($('pjS2'))$('pjS2').onclick=()=>{pjSaveAs($('pjN').value,true);openSave();};
+  $('shB').querySelectorAll('[data-po]').forEach(b=>b.onclick=()=>pjOpen(b.dataset.po));
+  $('shB').querySelectorAll('[data-pr]').forEach(b=>b.onclick=()=>{const p=pjGet(b.dataset.pr);const n=prompt('新名字',p.name);if(n&&n.trim()){p.name=n.trim();pjWrite();refresh(true);openSave();}});
+  $('shB').querySelectorAll('[data-pd]').forEach(b=>b.onclick=()=>{if(!confirmTwice('pd'+b.dataset.pd))return;PJS=PJS.filter(p=>p.id!==b.dataset.pd);if(UI.proj===b.dataset.pd){UI.proj=null;saveUI();}pjWrite();refresh(true);openSave();toast('已删除');});
+  $('pjB').onclick=()=>{const blob=new Blob([JSON.stringify({app:'rcm',v:1,at:Date.now(),projects:PJS})],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='沿线公寓比价-备份-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);toast('备份文件已下载');};
+  $('pjR').onclick=()=>{const f=document.createElement('input');f.type='file';f.accept='.json,application/json';f.onchange=async()=>{try{const j=JSON.parse(await f.files[0].text());const L=j.projects||[];let n=0;L.forEach(p=>{if(!p||!p.id||!p.plan)return;const i=PJS.findIndex(x=>x.id===p.id);if(i>=0)PJS[i]=p;else PJS.push(p);n++;});pjWrite();toast(`还原了 ${n} 个项目`);openSave();}catch(e){toast('这个文件不对');}};f.click();};}
+$('bSave').onclick=openSave;
+/* 本机资料被清掉时，从 IndexedDB 拿回来 */
+(async()=>{const v=await IDB.get('rcm-projects');if(v){try{const L=JSON.parse(v);if(Array.isArray(L)&&L.length>PJS.length){PJS=L;LS.set('rcm-projects',PJS);refresh(true);}}catch(e){}}else if(PJS.length)IDB.put('rcm-projects',JSON.stringify(PJS));
+  try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist();}catch(e){}})();
 
 window.__rcm={PLAN:()=>PLAN,DATA:()=>DATA,V};
 </script>
