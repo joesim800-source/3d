@@ -49,6 +49,12 @@ button.on{background:#dc2626;border-color:#dc2626;color:#fff}
 #g3Box .g3bar button,#g3Box .g3x{background:#fff;border:0;border-radius:14px;padding:10px 14px;font-size:15px;font-weight:800;box-shadow:0 3px 12px #0005;color:#0f2e25}
 #g3Box .g3x{position:absolute;top:max(12px,env(safe-area-inset-top));right:12px;z-index:2;font-size:16px}
 #g3Box .g3t{position:absolute;top:max(12px,env(safe-area-inset-top));left:12px;z-index:2;background:#0f2e25e6;color:#fff;border-radius:12px;padding:8px 12px;font-size:13px;font-weight:700;max-width:60vw}
+.rgs{display:flex;gap:6px;flex-wrap:wrap}.rgs button{padding:7px 11px;border-radius:999px;font-size:13px}.rgs button.on{background:#0D4A38;color:#fff;border-color:#0D4A38}
+.lk{font-size:12px;font-weight:800;color:#6b5a3a;margin:10px 0 4px;letter-spacing:.06em}.lcs{display:flex;flex-wrap:wrap;gap:6px}
+.lc{display:inline-flex;align-items:center;gap:6px;padding:7px 11px;border-radius:999px;border:2px solid var(--c)!important;background:#fff;font-weight:700;font-size:13px}.lc i{width:12px;height:12px;border-radius:50%;background:var(--c)}.lc.on{background:var(--c);color:#fff}.lc.on i{background:#fff}
+.lnp{position:absolute;left:0;top:0;background:var(--c);color:#fff;font-size:11px;font-weight:800;padding:3px 8px;border-radius:999px;border:2px solid #fff;box-shadow:0 2px 6px #0004;white-space:nowrap;cursor:pointer;pointer-events:auto}
+#lnPick{position:fixed;left:50%;bottom:110px;transform:translate(-50%,20px);opacity:0;pointer-events:none;transition:.2s;z-index:30;background:#fff;border-radius:16px;padding:10px 12px;display:flex;align-items:center;gap:10px;box-shadow:0 6px 24px #0004;border:3px solid var(--c);max-width:94vw}
+#lnPick.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}#lnPick i{width:14px;height:14px;border-radius:50%;background:var(--c);flex:none}#lnPick b{font-size:14px;white-space:nowrap}#lnPick button{background:var(--c);color:#fff;border:0;border-radius:10px;padding:8px 12px;font-weight:800;white-space:nowrap}
 #mt{position:fixed;left:10px;z-index:9;display:flex;gap:6px;flex-wrap:wrap}#mt .seg{background:#fff;box-shadow:0 2px 8px #0002}
 #tools{position:fixed;right:10px;z-index:9;display:flex;flex-direction:column;gap:6px}
 #tools button{width:42px;height:42px;padding:0;font-size:18px;border-radius:12px;box-shadow:0 2px 8px #0002}
@@ -113,7 +119,7 @@ body.routing .cd,body.routing .lm,body.routing #strip{display:none!important}
     </div>
   </div>
 </div>
-<div id="mt"><span class="seg"><button data-mt="st">街道</button><button data-mt="sat">卫星</button><button data-mt="topo">地形</button></span><span class="seg"><button data-d3="0">2D</button><button data-d3="1">3D</button></span><span class="seg"><button id="bG3" class="g3b">📷 真实3D</button></span></div>
+<div id="lnPick"></div><div id="mt"><span class="seg"><button data-mt="st">街道</button><button data-mt="sat">卫星</button><button data-mt="topo">地形</button></span><span class="seg"><button data-d3="0">2D</button><button data-d3="1">3D</button></span><span class="seg"><button id="bG3" class="g3b">📷 真实3D</button></span></div>
 <div id="tools"><button id="bLm" title="周边地标">📍</button><button id="bRt" title="路线模拟">🚗</button><button id="bNorth" title="指北"><span style="display:inline-block">🧭</span></button><button id="bRotL" class="d3o" title="向左转">⟲</button><button id="bRotR" class="d3o" title="向右转">⟳</button><button id="bTilt" class="d3o" title="斜 / 平">◢</button><button id="bIn">＋</button><button id="bOut">－</button><button id="bFit" title="全线">⤢</button></div>
 <div id="strip"></div>
 <div id="attr">地图 © Esri · 线路与楼名 © OpenStreetMap contributors</div>
@@ -270,6 +276,7 @@ function draw(){RQ=0;camSetup();
     TL=null;glTiles(UI.layer,1);if(UI.layer==='sat')glTiles('ref',1);if(UI.d3)glBld();txTrim();}
   g.setTransform(DPR,0,0,DPR,0,0);g.clearRect(0,0,W,H);
   try{drawLm();}catch(e){}
+  try{drawNet();}catch(e){}
   const sat=UI.layer==='sat';
   if(PLAN){const S=sel();const P=S.map(s=>toScr(s.lat,s.lng));g.lineJoin='round';g.lineCap='round';
     g.strokeStyle=sat?'rgba(240,215,160,.85)':'rgba(176,138,79,.6)';g.lineWidth=10;pathTo(P);g.stroke();
@@ -279,7 +286,7 @@ function draw(){RQ=0;camSetup();
     S.forEach((s,i)=>{const p=P[i];if(p[2]<=0)return;g.beginPath();g.arc(p[0],p[1],6,0,Math.PI*2);g.fillStyle='#fff';g.fill();g.lineWidth=3;g.strokeStyle=PLAN.color||'#0D4A38';g.stroke();});
     if(V.z>=13&&!RT.on)condos().forEach(c=>{const p=toScr(c.lat,c.lng),t=tierOf(c);if(p[2]<=0)return;g.beginPath();g.arc(p[0],p[1],4.5,0,Math.PI*2);g.fillStyle=t==='ft'?'#D9B772':['#9aa39f','#2F7D5B','#BE8A2E','#9E3344'][t];g.fill();g.lineWidth=1.5;g.strokeStyle='#fff';g.stroke();});}
   try{drawRoute();}catch(e){}
-  placeLabels();try{placeLm();placeRoute();}catch(e){}
+  placeLabels();try{placeLm();placeRoute();placeNet();}catch(e){}
   const cp=$('bNorth');if(cp)cp.querySelector('span').style.transform=`rotate(${-V.bear}deg)`;
   wantBld();}
 
@@ -290,7 +297,7 @@ function zoomAt(z,sx,sy){const a=toLL(sx,sy);setZ(z);camSetup();const b=toLL(sx,
 function panBy(dx,dy){camSetup();const a=toLL(W/2,H/2),b=toLL(W/2-dx,H/2-dy);V.lat+=b[0]-a[0];V.lng+=b[1]-a[1];req();}
 const mp=$('map');
 mp.addEventListener('contextmenu',e=>e.preventDefault());
-mp.addEventListener('pointerdown',e=>{if(e.target.closest&&e.target.closest('.st,.cd,.lm'))return;mp.setPointerCapture(e.pointerId);PT.set(e.pointerId,[e.clientX,e.clientY]);ANI=null;
+mp.addEventListener('pointerdown',e=>{if(e.target.closest&&e.target.closest('.st,.cd,.lm,.lnp'))return;mp.setPointerCapture(e.pointerId);PT.set(e.pointerId,[e.clientX,e.clientY]);ANI=null;
   MD=(e.button===2||e.ctrlKey)?'rot':null;
   if(PT.size===2){const a=[...PT.values()];PZ={d:Math.hypot(a[0][0]-a[1][0],a[0][1]-a[1][1]),ang:Math.atan2(a[1][1]-a[0][1],a[1][0]-a[0][0]),z:V.z,b:V.bear,p:V.pitch,my:(a[0][1]+a[1][1])/2,cx:(a[0][0]+a[1][0])/2,cy:(a[0][1]+a[1][1])/2};}});
 mp.addEventListener('pointermove',e=>{const p=PT.get(e.pointerId);if(!p)return;const dx=e.clientX-p[0],dy=e.clientY-p[1];PT.set(e.pointerId,[e.clientX,e.clientY]);
@@ -351,11 +358,11 @@ function placeLabels(){const used=new Set(),boxes=[];
 const OP=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter'];
 async function overpass(q){let last;for(const u of OP){try{const r=await fetch(u,{method:'POST',body:'data='+encodeURIComponent(q),headers:{'Content-Type':'application/x-www-form-urlencoded'}});if(!r.ok)throw new Error('HTTP '+r.status);return await r.json();}catch(e){last=e;}}throw last||new Error('网络');}
 const REGIONS={kv:{n:'巴生谷（吉隆坡 / 雪兰莪）',b:[2.75,101.30,3.40,101.95]},pg:{n:'槟城',b:[5.20,100.15,5.60,100.55]},jb:{n:'新山',b:[1.38,103.55,1.65,103.95]}};
-async function findLines(bb){busy(1,'正在找这一带的火车线路…');try{
+async function findLines(bb,rk){busy(1,'正在找这一带的火车线路…');let ok=false;try{
   const j=await overpass(`[out:json][timeout:60];relation["type"="route"]["route"~"^(subway|light_rail|monorail|train|tram)$"](${bb.join(',')});out tags;`);
   const seen=new Set();LINES=j.elements.map(r=>{const t=r.tags||{};return {id:r.id,name:t.name||t.ref||('线路 '+r.id),ref:t.ref||'',color:t.colour||'',from:t.from||'',to:t.to||'',route:t.route};})
     .filter(l=>{const k=l.name;if(seen.has(k))return false;seen.add(k);return true;}).sort((a,b)=>a.name.localeCompare(b.name));
-  LS.set('rcm-lines',LINES);toast(`找到 ${LINES.length} 条线路`);}catch(e){toast('找不到线路：'+(e.message||e)+'。请检查网络。',4000);}finally{busy(0);}openSetup();}
+  UI.rg=rk||'view';saveUI();LS.set('rcm-lines',LINES);ok=true;}catch(e){toast('找不到线路：'+(e.message||e)+'。请检查网络。',4000);}finally{busy(0);}openSetup();if(ok)loadNet(UI.rg);}
 async function loadLine(id){busy(1,'正在读取站点…');try{
   const j=await overpass(`[out:json][timeout:60];relation(${id})->.r;.r out body;node(r.r);out body;way(r.r);out center tags;`);
   const rel=j.elements.find(e=>e.type==='relation'),N=new Map(),Wy=new Map();j.elements.forEach(e=>{if(e.type==='node')N.set(e.id,e);if(e.type==='way')Wy.set(e.id,e);});
@@ -364,7 +371,7 @@ async function loadLine(id){busy(1,'正在读取站点…');try{
   const S=[];st.forEach(s=>{if(!s.name)return;const l=S[S.length-1];if(l&&(l.name===s.name||hav(l.lat,l.lng,s.lat,s.lng)<150))return;S.push(s);});
   if(S.length<2)throw new Error('这条线路在地图资料里没有站点');
   const t=rel.tags||{};const L=LINES.find(x=>x.id===id)||{};
-  PLAN={lineId:id,lineName:t.name||L.name||'',color:t.colour||'#0D4A38',stations:S.map((s,i)=>({id:i,name:s.name,lat:s.lat,lng:s.lng})),from:0,to:S.length-1,condos:null};
+  const nm0=t.name||L.name||'';PLAN={lineId:id,lineName:grpName(nm0,t.from,t.to)||nm0,color:lineCol(nm0,t.colour),stations:S.map((s,i)=>({id:i,name:s.name,lat:s.lat,lng:s.lng})),from:0,to:S.length-1,condos:null};
   savePlan();toast(`读到 ${S.length} 个站`);}catch(e){toast('读取失败：'+(e.message||e),4000);}finally{busy(0);}openSetup();refresh();}
 async function loadCondos(){if(!PLAN)return;const S=sel(),R=UI.radius;busy(1,`正在找每个站 ${R} 米内的公寓…`);try{
   const line=S.map(s=>s.lat.toFixed(5)+','+s.lng.toFixed(5)).join(',');const ar=`(around:${R+60},${line})`;
@@ -385,7 +392,7 @@ function strip(){const E=$('strip');if(!PLAN){E.innerHTML=`<div class="sc ov" id
   E.querySelectorAll('[data-st]').forEach(e=>e.onclick=()=>openStation(+e.dataset.st));E.querySelector('[data-ov]').onclick=openOverview;}
 
 /* ========== 底部面板 ========== */
-function sheet(t,html){$('shT').textContent=t;$('shB').innerHTML=html;$('sheet').classList.add('show');$('shB').scrollTop=0;}
+function sheet(t,html){const lp=$('lnPick');if(lp)lp.classList.remove('show');$('shT').textContent=t;$('shB').innerHTML=html;$('sheet').classList.add('show');$('shB').scrollTop=0;}
 function closeSheet(){$('sheet').classList.remove('show');ACT=null;refresh(true);}
 $('shX').onclick=closeSheet;
 function gapTxt(d){if(!(d.ask>0&&d.tx>0))return '';const p=Math.round((d.tx-d.ask)/d.ask*100);return `成交比叫价${p<0?'低':'高'} ${Math.abs(p)}%`;}
@@ -422,6 +429,7 @@ function openStation(sid){const s=PLAN.stations.find(x=>x.id===sid);if(!s)return
    <div class="row" style="margin-top:10px"><button id="addC">＋ 在地图上加一个公寓</button></div>`);
   $('shB').querySelectorAll('[data-c]').forEach(e=>e.onclick=()=>openCondo(e.dataset.c));$('addC').onclick=()=>startAdd(sid);
   refresh(true);setTimeout(()=>flyVis(s.lat,s.lng,Math.max(15.6,V.z)),30);}
+function ipUrl(c,m){/* iProperty 每个盘的网址有编号，用 Google 只搜 iProperty 最稳 */return 'https://www.google.com/search?q='+encodeURIComponent(c.name+(m==='rent'?' for rent':' for sale')+' site:iproperty.com.my');}
 function openCondo(k){const c=PLAN.condos.find(x=>x.k===k);if(!c)return;ACT={c:k,st:c.st};const d=dOf(c),s=PLAN.stations.find(x=>x.id===c.st)||{};
   const y=yieldOf(d),tr=tierOf(c),tname=tr==='ft'?'⭐ 主推':['未分档','入门','中位','高价'][tr];
   sheet(c.name,`<p class="hint" style="margin-top:0"><span class="tag">${esc(s.name||'')}</span>${c.dist} 米 · 走路约 ${walkMin(c.dist)} 分钟 · ${tname}${d.demo?' · <b style="color:#b45309">示意数字，不是真实价格</b>':''}</p>
@@ -429,8 +437,10 @@ function openCondo(k){const c=PLAN.condos.find(x=>x.k===k);if(!c)return;ACT={c:k
    <div><small>真实成交中位</small><b>${+d.tx?'RM'+Math.round(d.tx):'—'}</b><em>${+d.tx?'psf · '+(d.txn||'?')+' 笔':'暂无成交 / 新盘'}</em></div>
    <div><small>月租</small><b>${+d.rmin?'RM'+d.rmin+(+d.rmax?'–'+d.rmax:''):'—'}</b><em>${y?'回报率约 '+y.toFixed(1)+'%':'填面积可算回报率'}</em></div>
    <div><small>叫价 vs 成交</small><b style="font-size:15px">${gapTxt(d)||'—'}</b><em>${d.tenure?esc(d.tenure):''}${d.yr?' · '+d.yr+' 年':''}${d.units?' · '+d.units+' 户':''}</em></div></div>
-   <div class="row"><button class="${d.feat?'on':'gold'}" id="cFt">${d.feat?'⭐ 已是主推（再按取消）':'⭐ 设为主推'}</button><a class="btn" href="https://www.iproperty.com.my/sale/?q=${encodeURIComponent(c.name)}" target="_blank" rel="noopener">More · iProperty ↗</a></div>
-   <div class="row" style="margin-top:8px"><button id="cLm">📍 周边地标</button><button id="cRt">🚗 路线模拟</button></div>
+   <div class="row"><button class="${d.feat?'on':'gold'}" id="cFt">${d.feat?'⭐ 已是主推（再按取消）':'⭐ 设为主推'}</button></div>
+   <div class="row" style="margin-top:8px"><a class="btn" href="${ipUrl(c,'sale')}" target="_blank" rel="noopener">🏷 iProperty 买卖价 ↗</a><a class="btn" href="${ipUrl(c,'rent')}" target="_blank" rel="noopener">🔑 iProperty 租金 ↗</a></div>
+   <div class="row" style="margin-top:8px"><button class="pri" id="cDrv">🚗 开车去 ${esc(s.name||'')} 站</button><button id="cWlk">🚶 走路去 ${esc(s.name||'')} 站</button></div>
+   <div class="row" style="margin-top:8px"><button id="cLm">📍 周边地标</button><button id="cRt">🛣 更多路线</button></div>
    <details><summary>✏️ 改这个盘的资料</summary><div class="fm">
     <label>叫价 psf</label><input type="number" inputmode="decimal" id="fAsk" value="${esc(d.ask||'')}">
     <label>成交 psf</label><input type="number" inputmode="decimal" id="fTx" value="${esc(d.tx||'')}">
@@ -443,7 +453,7 @@ function openCondo(k){const c=PLAN.condos.find(x=>x.k===k);if(!c)return;ACT={c:k
     <label>产权</label><input type="text" id="fTen" value="${esc(d.tenure||'')}" placeholder="Freehold / Leasehold / 马来保留地…">
     <label>地图短名</label><input type="text" id="fShort" value="${esc(c.short||'')}">
    </div><div class="row"><button class="pri" id="cSave">储存</button>${c.manual?'<button id="cDel">删除这个盘</button>':'<button id="cHide">从图上拿掉</button>'}</div></details>`);
-  $('cLm').onclick=()=>{ACT={c:k,st:c.st};openLandmarks();};$('cRt').onclick=()=>{ACT={c:k,st:c.st};openRoutes();};
+  $('cLm').onclick=()=>{ACT={c:k,st:c.st};openLandmarks();};const og={lat:c.lat,lng:c.lng,name:c.short||c.name},sd={lat:s.lat,lng:s.lng,name:(s.name||'')+' 站'};if($('cDrv'))$('cDrv').onclick=()=>{ACT={c:k,st:c.st};routeTo(sd,'drive',og);};if($('cWlk'))$('cWlk').onclick=()=>{ACT={c:k,st:c.st};routeTo(sd,'walk',og);};$('cRt').onclick=()=>{ACT={c:k,st:c.st};openRoutes();};
   $('cFt').onclick=()=>{const was=!!d.feat;PLAN.condos.forEach(x=>{if(DATA[x.k])DATA[x.k].feat=false;});d.feat=!was;saveData();openCondo(k);};
   $('cSave').onclick=()=>{const n=id=>{const v=$(id).value.trim();return v===''?'':+v;};Object.assign(d,{ask:n('fAsk'),tx:n('fTx'),txn:n('fTxn'),rmin:n('fRmin'),rmax:n('fRmax'),size:n('fSize'),units:n('fUnits'),yr:n('fYr'),tenure:$('fTen').value.trim(),demo:false});
     c.short=$('fShort').value.trim()||c.short;saveData();savePlan();toast('已储存');openCondo(k);};
@@ -460,23 +470,28 @@ mp.addEventListener('click',e=>{if(!ADD||!PLAN)return;const ll=toLL(e.clientX,e.
 
 /* ========== 设定：地区 → 线路 → 从哪站到哪站 → 半径 ========== */
 function openSetup(){LINES=LINES.length?LINES:LS.get('rcm-lines',[]);const st=PLAN?PLAN.stations:[];
+  if(!LINES.length&&!openSetup.auto){openSetup.auto=1;const r=REGIONS.kv;findLines(r.b,'kv');return;}
+  if(LINES.length&&!NET&&!openSetup.net){openSetup.net=1;setTimeout(()=>loadNet(UI.rg||'kv'),50);}
+  const G=groups(),KO=['MRT','LRT','KTM','单轨','机场线','BRT','其他','长途'];
+  const chips=KO.map(k=>{const L=G.filter(g=>g.kind===k);if(!L.length)return '';
+    return `<div class="lk">${k}</div><div class="lcs">${L.map(g=>`<button class="lc${PLAN&&g.ids.includes(PLAN.lineId)?' on':''}" style="--c:${g.col}" data-ln="${g.id}"><i></i>${esc(g.name)}</button>`).join('')}</div>`;}).join('');
   sheet('选择路线',`
-   <p class="hint" style="margin-top:0">① 先找线路：选一个地区，或把地图移到你要的城市，按「用目前地图范围」。</p>
-   <div class="row">${Object.entries(REGIONS).map(([k,r])=>`<button data-rg="${k}">${r.n}</button>`).join('')}<button data-rg="view">📍 用目前地图范围</button></div>
-   <div class="fm" style="margin-top:10px"><label>② 线路</label><select id="sLine"><option value="">${LINES.length?'— 选一条 —':'先按上面找线路'}</option>${LINES.map(l=>`<option value="${l.id}"${PLAN&&PLAN.lineId===l.id?' selected':''}>${esc(l.name)}</option>`).join('')}</select>
-   ${st.length?`<label>③ 从</label><select id="sFrom">${st.map((s,i)=>`<option value="${i}"${PLAN.from===i?' selected':''}>${esc(s.name)}</option>`).join('')}</select>
-   <label>到</label><select id="sTo">${st.map((s,i)=>`<option value="${i}"${PLAN.to===i?' selected':''}>${esc(s.name)}</option>`).join('')}</select>`:''}
-   <label>④ 半径</label><select id="sRad">${[300,500,800,1000].map(v=>`<option value="${v}"${UI.radius===v?' selected':''}>${v} 米</option>`).join('')}</select></div>
-   ${st.length?`<button class="pri" id="sGo" style="width:100%">🔎 找每个站附近的公寓</button>`:''}
-   <p class="hint">线路、站点、楼名来自免费的 OpenStreetMap，不用 API key。价格要自己填，或用 Excel 整理后导入。</p>
-   <details><summary>📄 价格资料：导入 / 导出</summary>
+   <div class="rgs">${Object.entries(REGIONS).map(([k,r])=>`<button data-rg="${k}" class="${UI.rg===k?'on':''}">${r.n.replace(/（.*）/,'')}</button>`).join('')}<button data-rg="view" class="${UI.rg==='view'?'on':''}">📍 目前地图</button></div>
+   <p class="hint" style="margin:8px 0 4px">① 点一条线（颜色跟官方路线图一样，地图上也画出来了，直接点地图上的线也可以）</p>
+   ${chips||`<p class="hint">${LINES.length?'':'正在找线路…'}</p>`}
+   ${st.length?`<div class="fm" style="margin-top:10px"><label>② 从</label><select id="sFrom">${st.map((s,i)=>`<option value="${i}"${PLAN.from===i?' selected':''}>${esc(s.name)}</option>`).join('')}</select>
+   <label>到</label><select id="sTo">${st.map((s,i)=>`<option value="${i}"${PLAN.to===i?' selected':''}>${esc(s.name)}</option>`).join('')}</select>
+   <label>③ 半径</label><select id="sRad">${[300,500,800,1000].map(v=>`<option value="${v}"${UI.radius===v?' selected':''}>${v} 米</option>`).join('')}</select></div>
+   <button class="pri" id="sGo" style="width:100%">🔎 找每个站附近的公寓</button>`:''}
+   <details style="margin-top:12px"><summary>📄 价格资料：导入 / 导出</summary>
     <p class="hint">按「导出表格」得到一份 CSV，里面已经列好所有公寓名字。用 Excel 填叫价、成交价、月租后，按「导入表格」就更新。来源建议：叫价取 iProperty / PropertyGuru 中位；成交价取 NAPIC 开放数据或 Brickz。</p>
-    <div class="row"><button id="dExp">⬇ 导出表格</button><button id="dImp">⬆ 导入表格</button><button id="dDemo">填入示意数字（演示用）</button><button id="dClr">清除全部价格</button></div></details>`);
-  document.querySelectorAll('[data-rg]').forEach(b=>b.onclick=()=>{const k=b.dataset.rg;if(k==='view'){const a=toLL(0,H),c=toLL(W,0);findLines([a[0],a[1],c[0],c[1]].map(v=>+v.toFixed(4)));}else{const r=REGIONS[k];V.lat=(r.b[0]+r.b[2])/2;V.lng=(r.b[1]+r.b[3])/2;V.z=10.5;req();findLines(r.b);}});
-  $('sLine').onchange=e=>{if(e.target.value)loadLine(+e.target.value);};
+    <div class="row"><button id="dExp">⬇ 导出表格</button><button id="dImp">⬆ 导入表格</button><button id="dDemo">填入示意数字（演示用）</button><button id="dClr">清除全部价格</button></div></details>
+   <p class="hint">线路、站点、楼名来自免费的 OpenStreetMap。价格要自己填，或用 Excel 导入。</p>`);
+  document.querySelectorAll('[data-rg]').forEach(b=>b.onclick=()=>{const k=b.dataset.rg;if(k==='view'){const a=toLL(0,H),c=toLL(W,0);findLines([a[0],a[1],c[0],c[1]].map(v=>+v.toFixed(4)),'view');}else{const r=REGIONS[k];V.lat=(r.b[0]+r.b[2])/2;V.lng=(r.b[1]+r.b[3])/2;V.z=10.5;req();findLines(r.b,k);}});
+  document.querySelectorAll('[data-ln]').forEach(b=>b.onclick=()=>loadLine(+b.dataset.ln));
   if($('sFrom'))$('sFrom').onchange=e=>{PLAN.from=+e.target.value;savePlan();refresh();};
   if($('sTo'))$('sTo').onchange=e=>{PLAN.to=+e.target.value;savePlan();refresh();};
-  $('sRad').onchange=e=>{UI.radius=+e.target.value;saveUI();req();};
+  if($('sRad'))$('sRad').onchange=e=>{UI.radius=+e.target.value;saveUI();req();};
   if($('sGo'))$('sGo').onclick=loadCondos;
   $('dExp').onclick=exportCSV;$('dImp').onclick=()=>$('fileIn').click();$('dDemo').onclick=demoFill;$('dClr').onclick=()=>{if(!confirmTwice('dClr'))return;DATA={};saveData();refresh();toast('已清除');};}
 $('bSet').onclick=openSetup;
@@ -638,6 +653,44 @@ async function openReal3D(){const key=gKey();if(!key){g3KeySheet();return;}
     if(k==='in')fly({range:Math.max(80,(map.range||500)/1.8)});if(k==='out')fly({range:Math.min(20000,(map.range||500)*1.8)});
     if(k==='orb'){try{map.flyCameraAround({camera:cam(),durationMillis:24000,rounds:1});}catch(err){toast('这个版本不支持绕一圈');}}};}
 $('bG3').onclick=openReal3D;
+
+
+/* ===== 全部路线：官方颜色（KTM / LRT / MRT / 单轨 / 机场线） ===== */
+const OFFC=[[/Batu Caves|Pulau Sebang|Seremban/i,'#1964B7'],[/Tanjung Malim|Port Klang|Pelabuhan Klang/i,'#E0115F'],[/Skypark/i,'#2DA5C9'],[/Sri Petaling/i,'#76232F'],[/Ampang/i,'#E57200'],[/Kelana Jaya/i,'#D50032'],
+  [/KLIA Ekspres|KLIA Express/i,'#8D198F'],[/KLIA Transit/i,'#00A19A'],[/Monorail|Monorel/i,'#84BD00'],[/Kajang/i,'#047940'],[/Putrajaya/i,'#FFCD00'],[/Shah Alam|Bandar Utama/i,'#33B5E5'],[/Circle|Lingkaran/i,'#8C6239'],[/Sunway|BRT/i,'#115740']];
+function lineKind(n){return /ETS|Intercity|Ekspres Rakyat|Timuran|Senandung|Shuttle|Tebrau|Gemas/i.test(n)?'长途':/KLIA|ERL/i.test(n)?'机场线':/Monorail|Monorel/i.test(n)?'单轨':/\bMRT\b/i.test(n)?'MRT':/\bLRT\b/i.test(n)?'LRT':/KTM|Komuter/i.test(n)?'KTM':/BRT/i.test(n)?'BRT':'其他';}
+function grpName(n,fr,to){let g=String(n||'').split(/\s*[:：(]/)[0].trim();if(/→|=>|->|–/.test(g)&&!/:/.test(n)){g=g.split(/\s*(?:→|=>|->)\s*/)[0].trim();}return g;}
+function lineCol(n,osm){const k=lineKind(n);if(k!=='长途'&&k!=='其他'){const g=grpName(n);for(const [re,c] of OFFC)if(re.test(g))return c;for(const [re,c] of OFFC)if(re.test(n))return c;}
+  if(/^#?[0-9a-f]{6}$/i.test(osm||''))return osm[0]==='#'?osm:'#'+osm;return {KTM:'#1964B7',LRT:'#D50032',MRT:'#047940','单轨':'#84BD00','机场线':'#8D198F',BRT:'#115740'}[k]||'#64748b';}
+function groups(){const M=new Map();(LINES||[]).forEach(l=>{const kind=lineKind(l.name);let key;
+    if(/[:：]/.test(l.name))key=grpName(l.name);else if(l.from&&l.to)key=kind+'|'+[l.from,l.to].sort().join('|');else key=grpName(l.name);
+    let g=M.get(key);if(!g){g={key,id:l.id,ids:[],name:grpName(l.name)||l.name,kind,col:lineCol(l.name,l.color)};M.set(key,g);}g.ids.push(l.id);});
+  return [...M.values()].sort((a,b)=>a.name.localeCompare(b.name));}
+let NET=LS.get('rcm-net',null);
+async function loadNet(rk){const G=groups().filter(g=>g.kind!=='长途');if(!G.length)return;
+  try{toast('正在把全部路线画上颜色…',2500);const j=await overpass(`[out:json][timeout:90];relation(id:${G.map(g=>g.id).join(',')});foreach->.x(.x out ids;way(r.x)["railway"];out geom qt;);`);
+    const by=new Map(G.map(g=>[g.id,{id:g.id,ids:g.ids,name:g.name,kind:g.kind,col:g.col,ways:[]}]));let cur=null;
+    for(const e of j.elements){if(e.type==='relation'){cur=by.get(e.id)||null;continue;}if(!cur||e.type!=='way'||!e.geometry)continue;
+      const P=[];let la=null,lo=null;e.geometry.forEach((q,i)=>{if(i&&i<e.geometry.length-1&&la!=null&&hav(la,lo,q.lat,q.lon)<30)return;la=q.lat;lo=q.lon;P.push(+q.lat.toFixed(5),+q.lon.toFixed(5));});if(P.length>=4)cur.ways.push(P);}
+    const out=[...by.values()].filter(g=>g.ways.length);out.forEach(g=>{let best=g.ways[0];g.ways.forEach(w=>{if(w.length>best.length)best=w;});const m=Math.floor(best.length/4)*2;g.mid=[best[m],best[m+1]];});
+    NET={rk,lines:out};LS.set('rcm-net',NET);req();}catch(e){toast('路线颜色读不到：'+(e.message||e),3500);}}
+function drawNet(){if(!NET||RT.on||V.z<8.5)return;const sat=UI.layer==='sat',step=V.z<11?3:1;g.lineJoin='round';g.lineCap='round';
+  for(const L of NET.lines){const on=PLAN&&L.ids.includes(PLAN.lineId);
+    for(const w of L.ways){const P=[];for(let i=0;i<w.length;i+=2*step)P.push(toScr(w[i],w[i+1]));const n=w.length;if((n/2-1)%step)P.push(toScr(w[n-2],w[n-1]));
+      pathTo(P);g.globalAlpha=on?1:0.9;g.strokeStyle=sat?'rgba(255,255,255,.9)':'#fff';g.lineWidth=on?7:5.5;g.stroke();g.strokeStyle=L.col;g.lineWidth=on?4.5:3.2;g.stroke();g.globalAlpha=1;}}}
+const LNE=new Map();
+function placeNet(){const show=NET&&!RT.on&&V.z>=9&&V.z<14.5;const used=new Set();
+  if(show)NET.lines.forEach(L=>{if(!L.mid||(PLAN&&L.ids.includes(PLAN.lineId)&&V.z>=11.5))return;const p=toScr(L.mid[0],L.mid[1]);if(p[2]<=0||p[0]<-50||p[1]<-30||p[0]>W+50||p[1]>H+30)return;const k='n'+L.id;used.add(k);
+    let e=LNE.get(k);if(!e){e=document.createElement('div');e.className='lnp';$('labs').appendChild(e);LNE.set(k,e);e.addEventListener('click',ev=>{ev.stopPropagation();pickLine(L);});}
+    e.style.setProperty('--c',L.col);e.textContent=L.name;e.style.transform=`translate(${p[0]}px,${p[1]}px) translate(-50%,-50%)`;e.style.display='';});
+  LNE.forEach((e,k)=>{if(!used.has(k))e.style.display='none';});}
+function pickLine(L){const e=$('lnPick');e.style.setProperty('--c',L.col);e.innerHTML=`<i></i><b>${esc(L.name)}</b><button>选这条线 ▶</button>`;e.classList.add('show');clearTimeout(pickLine.t);pickLine.t=setTimeout(()=>e.classList.remove('show'),6000);
+  e.querySelector('button').onclick=()=>{e.classList.remove('show');if(PLAN&&L.ids.includes(PLAN.lineId)){openSetup();return;}loadLine(L.id);};}
+let DN=null;mp.addEventListener('pointerdown',e=>{DN=[e.clientX,e.clientY];},true);
+mp.addEventListener('click',e=>{if(ADD||!NET||RT.on||V.z<8.5)return;if(DN&&Math.hypot(e.clientX-DN[0],e.clientY-DN[1])>8)return;
+  let best=null,bd=16;for(const L of NET.lines)for(const w of L.ways){let a=toScr(w[0],w[1]);for(let i=2;i<w.length;i+=2){const b=toScr(w[i],w[i+1]);if(a[2]>0&&b[2]>0){const d=segD(e.clientX,e.clientY,a,b);if(d<bd){bd=d;best=L;}}a=b;}}
+  if(best)pickLine(best);});
+function segD(x,y,a,b){const dx=b[0]-a[0],dy=b[1]-a[1],l=dx*dx+dy*dy||1;let t=((x-a[0])*dx+(y-a[1])*dy)/l;t=Math.max(0,Math.min(1,t));return Math.hypot(x-a[0]-t*dx,y-a[1]-t*dy);}
 
 window.__rcm={PLAN:()=>PLAN,DATA:()=>DATA,V};
 </script>
