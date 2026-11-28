@@ -440,7 +440,7 @@ function openOverview(){if(!PLAN){openSetup();return;}ACT=null;const S=sel();con
    <div><small>最便宜的站</small><b style="font-size:15px">${lo?esc(lo.s.name):'—'}</b><em>${lo?'RM'+Math.round(lo.m)+' psf':''}</em></div>
    <div><small>最贵的站</small><b style="font-size:15px">${hi?esc(hi.s.name):'—'}</b><em>${hi?'RM'+Math.round(hi.m)+' psf':''}</em></div></div>
    ${ft&&fv?`<p class="hint">⭐ 主推 <b>${esc(ft.name)}</b>：RM${Math.round(fv)} psf，${(()=>{const m=stStats(ft.st).m;if(!m)return '';const p=Math.round((fv-m)/m*100);return `比本站中位${p<0?'便宜':'贵'} ${Math.abs(p)}%`;})()}</p>`:''}
-   <div class="row" style="margin:6px 0 10px"><button class="pri" id="ovAdd">＋ 加楼盘</button><button class="pri" id="ovWeb" style="background:#1d4ed8;border-color:#1d4ed8">🌐 全线网上查价钱</button></div><canvas class="chart" id="chart"></canvas>
+   <div class="row" style="margin:6px 0 10px"><button class="pri" id="ovAdd">＋ 加楼盘</button><button class="pri" id="ovWeb" style="background:#1d4ed8;border-color:#1d4ed8">🌐 全线网上查价钱</button></div><p class="hint" style="margin:-4px 0 8px">Gemini key：${gemKey()?'<b style="color:#047857">✅ 已储存</b>':'<b style="color:#b45309">⚠ 还没放（☰ 路线 → 🤖 Gemini key）</b>'}</p><canvas class="chart" id="chart"></canvas>
    <p class="hint">每条 = 一个站 ${UI.radius} 米内公寓的中位 psf，条下数字是盘数。金色虚线是你的主推盘。颜色和地图一样：青便宜、橙中等、红贵（按这条线自己的价格分三档）。</p>`);
   if($('ovAdd'))$('ovAdd').onclick=()=>openAddCondos();if($('ovWeb'))$('ovWeb').onclick=webAll;setTimeout(()=>chart(rows,fv),30);refresh(true);fitPts(S.map(s=>[s.lat,s.lng]));}
 function chart(rows,fv){const c=$('chart');if(!c)return;const dpr=Math.min(2,devicePixelRatio||1),w=c.clientWidth,h=Math.max(220,Math.min(300,w*0.6));c.style.height=h+'px';c.width=w*dpr;c.height=h*dpr;const x=c.getContext('2d');x.scale(dpr,dpr);
@@ -471,7 +471,7 @@ function openCondo(k){const c=PLAN.condos.find(x=>x.k===k);if(!c)return;ACT={c:k
    <div><small>月租</small><b>${+d.rmin?'RM'+d.rmin+(+d.rmax?'–'+d.rmax:''):'—'}</b><em>${y?'回报率约 '+y.toFixed(1)+'%':'填面积可算回报率'}</em></div>
    <div><small>叫价 vs 成交</small><b style="font-size:15px">${gapTxt(d)||'—'}</b><em>${d.tenure?esc(d.tenure):''}${d.yr?' · '+d.yr+' 年':''}${d.units?' · '+d.units+' 户':''}</em></div></div>
    <div class="row"><button class="${d.feat?'on':'gold'}" id="cFt">${d.feat?'⭐ 已是主推（再按取消）':'⭐ 设为主推'}</button></div>
-   <div class="row" style="margin-top:8px"><button class="pri" id="cWeb" style="background:#1d4ed8;border-color:#1d4ed8">🌐 网上查价钱（Gemini）</button></div>${webInfo(d)}<div id="cWebR"></div>
+   <div class="row" style="margin-top:8px"><button class="pri" id="cWeb" style="background:#1d4ed8;border-color:#1d4ed8">🌐 网上查价钱（Gemini）</button><span class="hint" style="align-self:center">${gemKey()?'<b style="color:#047857">✅ key 已储存</b>':'<b style="color:#b45309">⚠ 还没放 key</b>'}</span></div>${webInfo(d)}<div id="cWebR"></div>
    <div class="row" style="margin-top:8px"><a class="btn" href="${ipUrl(c,'sale')}" target="_blank" rel="noopener">🏷 iProperty 买卖价 ↗</a><a class="btn" href="${ipUrl(c,'rent')}" target="_blank" rel="noopener">🔑 iProperty 租金 ↗</a></div>
    <div class="row" style="margin-top:8px"><button class="pri" id="cDrv">🚗 开车去 ${esc(s.name||'')} 站</button><button id="cWlk">🚶 走路去 ${esc(s.name||'')} 站</button></div>
    <div class="row" style="margin-top:8px"><button id="cLm">📍 周边地标</button><button id="cRt">🛣 更多路线</button></div>
