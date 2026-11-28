@@ -520,11 +520,14 @@ function openSetup(){LINES=LINES.length?LINES:LS.get('rcm-lines',[]);const st=PL
    <details style="margin-top:12px"><summary>📄 价格资料：导入 / 导出</summary>
     <p class="hint">按「导出表格」得到一份 CSV，里面已经列好所有公寓名字。用 Excel 填叫价、成交价、月租后，按「导入表格」就更新。来源建议：叫价取 iProperty / PropertyGuru 中位；成交价取 NAPIC 开放数据或 Brickz。</p>
     <div class="row"><button id="dExp">⬇ 导出表格</button><button id="dImp">⬆ 导入表格</button><button id="dDemo">填入示意数字（演示用）</button><button id="dClr">清除全部价格</button></div></details>
-   <details style="margin-top:10px"><summary>🤖 Gemini key（网上查价钱用）</summary>
+   <details style="margin-top:10px" ${gemKey()?'':'open'}><summary>🤖 Gemini key（网上查价钱用）<span id="gKS">${gkStat()}</span></summary>
     <p class="hint">跟 Prop 3D 用同一把。只存在这台机，不会上传。免费拿：<a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a></p>
-    <input id="gKey" type="password" autocomplete="off" placeholder="AIza…" value="${esc(gemKey())}" style="width:100%;padding:10px;font-size:16px;border:1px solid #ccc;border-radius:10px"></details>
+    <input id="gKey" type="password" autocomplete="off" placeholder="AIza…" value="${esc(gemKey())}" style="width:100%;padding:10px;font-size:16px;border:1px solid #ccc;border-radius:10px">
+    <div class="row" style="margin-top:8px"><button class="pri" id="gKSave">💾 储存</button><button id="gKDel">🗑 清除</button></div><div id="gKMsg" class="hint" style="font-weight:700">${gemKey()?'✅ 已储存：'+gkMask():''}</div></details>
    <p class="hint">线路、站点、楼名来自免费的 OpenStreetMap。价格要自己填、用 Excel 导入，或按 🌐 网上查。</p>`);
-  if($('gKey'))$('gKey').onchange=e=>{try{localStorage.setItem('prop3d-gkey',e.target.value.trim());}catch(_){}toast('已保存 Gemini key');};
+  const gkSet=v=>{try{if(v)localStorage.setItem('prop3d-gkey',v);else localStorage.removeItem('prop3d-gkey');}catch(_){}$('gKS').innerHTML=gkStat();$('gKMsg').innerHTML=v?'✅ 已储存：'+gkMask():'已清除';toast(v?'✅ Gemini key 已储存':'已清除');};
+  if($('gKSave'))$('gKSave').onclick=()=>{const v=$('gKey').value.trim();if(!v){toast('请先贴上 key');return;}if(!/^AIza[\w-]{20,}$/.test(v)){$('gKMsg').innerHTML='<span style="color:#b91c1c">这个看起来不像 Gemini key（应该是 AIza 开头）</span>';return;}gkSet(v);};
+  if($('gKDel'))$('gKDel').onclick=()=>{if(!confirmTwice('gk'))return;$('gKey').value='';gkSet('');};
   document.querySelectorAll('[data-rg]').forEach(b=>b.onclick=()=>{const k=b.dataset.rg;if(k==='view'){const a=toLL(0,H),c=toLL(W,0);findLines([a[0],a[1],c[0],c[1]].map(v=>+v.toFixed(4)),'view');}else{const r=REGIONS[k];V.lat=(r.b[0]+r.b[2])/2;V.lng=(r.b[1]+r.b[3])/2;V.z=10.5;req();findLines(r.b,k);}});
   document.querySelectorAll('[data-ln]').forEach(b=>b.onclick=()=>loadLine(+b.dataset.ln));
   if($('sFrom'))$('sFrom').onchange=e=>{PLAN.from=+e.target.value;savePlan();refresh();};
@@ -734,12 +737,14 @@ function segD(x,y,a,b){const dx=b[0]-a[0],dy=b[1]-a[1],l=dx*dx+dy*dy||1;let t=((
 
 
 /* ===== 🌐 网上查价钱：Gemini + Google 搜索（附来源，自己确认才填进去） ===== */
+function gkMask(){const k=gemKey();return k?k.slice(0,4)+'••••'+k.slice(-4):'';}
+function gkStat(){return gemKey()?' <b style="color:#047857">✅ 已储存</b>':' <b style="color:#b45309">（还没放）</b>';}
 function gemKey(){try{return localStorage.getItem('prop3d-gkey')||'';}catch(e){return '';}}
 function gemModel(){try{return localStorage.getItem('prop3d-gmodel')||'gemini-2.5-flash';}catch(e){return 'gemini-2.5-flash';}}
 function needKey(){if(gemKey())return false;sheet('🤖 先放 Gemini key',`<p class="hint" style="margin-top:0">网上查价钱要用 Google Gemini（免费）。如果你在 Prop 3D 已经放过，这里会自动用同一把。</p>
   <input id="gk2" type="password" autocomplete="off" placeholder="AIza…" style="width:100%;padding:10px;font-size:16px;border:1px solid #ccc;border-radius:10px;margin:6px 0">
   <p class="hint">免费拿 key：<a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>。只存在这台机。</p><button class="pri" id="gk2s" style="width:100%">保存</button>`);
-  $('gk2s').onclick=()=>{const v=$('gk2').value.trim();if(!v)return;try{localStorage.setItem('prop3d-gkey',v);}catch(e){}toast('已保存，再按一次 🌐 就可以查');closeSheet();};return true;}
+  $('gk2s').onclick=()=>{const v=$('gk2').value.trim();if(!v)return;try{localStorage.setItem('prop3d-gkey',v);}catch(e){}toast('✅ Gemini key 已储存，再按一次 🌐 就可以查',3500);closeSheet();};return true;}
 async function webAsk(c){const st=(PLAN.stations.find(x=>x.id===c.st)||{}).name||'';
   const prompt=`You are a Malaysian property data researcher. Use Google Search to find CURRENT market data for the residential project "${c.name}" near ${st} station (lat ${c.lat.toFixed(5)}, lng ${c.lng.toFixed(5)}), Malaysia.
 Find, only from real web pages you can cite (iProperty, PropertyGuru, Mudah, EdgeProp, Brickz, NAPIC):
