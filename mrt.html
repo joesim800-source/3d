@@ -122,7 +122,7 @@ body.routing .cd,body.routing .lm,body.routing #strip{display:none!important}
 <div id="lnPick"></div><div id="mt"><span class="seg"><button data-mt="st">街道</button><button data-mt="sat">卫星</button><button data-mt="topo">地形</button></span><span class="seg"><button data-d3="0">2D</button><button data-d3="1">3D</button></span><span class="seg"><button id="bG3" class="g3b">📷 真实3D</button></span></div>
 <div id="tools"><button id="bLm" title="周边地标">📍</button><button id="bRt" title="路线模拟">🚗</button><button id="bNorth" title="指北"><span style="display:inline-block">🧭</span></button><button id="bRotL" class="d3o" title="向左转">⟲</button><button id="bRotR" class="d3o" title="向右转">⟳</button><button id="bTilt" class="d3o" title="斜 / 平">◢</button><button id="bIn">＋</button><button id="bOut">－</button><button id="bFit" title="全线">⤢</button></div>
 <div id="strip"></div>
-<div id="attr">地图 © Esri · 线路与楼名 © OpenStreetMap contributors</div>
+<div id="attr">地图字 © CARTO · 卫星 / 地形 © Esri · © OpenStreetMap contributors</div>
 <div id="sheet"><div class="hd"><h2 id="shT"></h2><button id="shX">✕</button></div><div class="bd" id="shB"></div></div>
 <div id="toast"></div>
 <div id="busy">⏳ <span id="busyT">读取中…</span></div>
@@ -152,10 +152,12 @@ const dOf=c=>DATA[c.k]||(DATA[c.k]={});
 const pv=c=>{const d=DATA[c.k]||{};return +(UI.pm==='tx'?d.tx:d.ask)||0;};
 
 /* ========== 地图引擎：2D / 3D（WebGL），街道 / 卫星 / 地形，免 key ========== */
-const TILES={st:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+/* 街道图和卫星图上的字用 CARTO（英文 / 罗马字），卫星照片用 Esri */
+const R2X=(devicePixelRatio||1)>1.2?'@2x':'';
+const TILES={st:'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}'+R2X+'.png',
   sat:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
   topo:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
-  ref:'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'};
+  ref:'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}'+R2X+'.png'};
 if(!UI.layer||!TILES[UI.layer]||UI.layer==='ref')UI.layer='sat';if(UI.d3==null)UI.d3=false;
 const V={lat:3.10,lng:101.70,z:11,pitch:0,bear:0};
 let W=0,H=0,DPR=1;const cv=$('cv'),g=cv.getContext('2d'),glc=$('glc');
@@ -198,7 +200,7 @@ const TX=new Map();
 function texOf(src,z,x,y,peek){const n=2**z;if(y<0||y>=n)return null;x=((x%n)+n)%n;const k=src+z+'/'+x+'/'+y;let o=TX.get(k);
   if(!o){if(peek)return null;o={im:new Image(),tx:null,bad:false,t:0};o.im.crossOrigin='anonymous';o.im.decoding='async';o.im.onload=()=>{try{o.tx=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,o.tx);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,o.im);
       gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);o.im=null;}catch(e){o.bad=true;}req();};
-    o.im.onerror=()=>{o.bad=true;};o.im.src=TILES[src].replace('{z}',z).replace('{y}',y).replace('{x}',x);TX.set(k,o);}
+    o.im.onerror=()=>{o.bad=true;};o.im.src=TILES[src].replace('{s}','abcd'[(x+y)%4]).replace('{z}',z).replace('{y}',y).replace('{x}',x);TX.set(k,o);}
   o.t=performance.now();return o;}
 function txTrim(){/* 只留最近用过的图块，iPad 不会被撑爆 */if(TX.size<=320)return;const now=performance.now();const A=[...TX.entries()].filter(e=>now-e[1].t>1500).sort((a,b)=>a[1].t-b[1].t);
   for(const [k,o] of A){if(TX.size<=260)break;if(o.tx)gl.deleteTexture(o.tx);if(o.im)o.im.src='';TX.delete(k);}}
