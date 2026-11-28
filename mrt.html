@@ -522,11 +522,11 @@ function openSetup(){LINES=LINES.length?LINES:LS.get('rcm-lines',[]);const st=PL
     <div class="row"><button id="dExp">⬇ 导出表格</button><button id="dImp">⬆ 导入表格</button><button id="dDemo">填入示意数字（演示用）</button><button id="dClr">清除全部价格</button></div></details>
    <details style="margin-top:10px" ${gemKey()?'':'open'}><summary>🤖 Gemini key（网上查价钱用）<span id="gKS">${gkStat()}</span></summary>
     <p class="hint">跟 Prop 3D 用同一把。只存在这台机，不会上传。免费拿：<a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a></p>
-    <input id="gKey" type="password" autocomplete="off" placeholder="AIza…" value="${esc(gemKey())}" style="width:100%;padding:10px;font-size:16px;border:1px solid #ccc;border-radius:10px">
+    <input id="gKey" type="password" autocomplete="off" placeholder="AQ.… 或 AIza…" value="${esc(gemKey())}" style="width:100%;padding:10px;font-size:16px;border:1px solid #ccc;border-radius:10px">
     <div class="row" style="margin-top:8px"><button class="pri" id="gKSave">💾 储存</button><button id="gKDel">🗑 清除</button></div><div id="gKMsg" class="hint" style="font-weight:700">${gemKey()?'✅ 已储存：'+gkMask():''}</div></details>
    <p class="hint">线路、站点、楼名来自免费的 OpenStreetMap。价格要自己填、用 Excel 导入，或按 🌐 网上查。</p>`);
   const gkSet=v=>{try{if(v)localStorage.setItem('prop3d-gkey',v);else localStorage.removeItem('prop3d-gkey');}catch(_){}$('gKS').innerHTML=gkStat();$('gKMsg').innerHTML=v?'✅ 已储存：'+gkMask():'已清除';toast(v?'✅ Gemini key 已储存':'已清除');};
-  if($('gKSave'))$('gKSave').onclick=()=>{const v=$('gKey').value.trim();if(!v){toast('请先贴上 key');return;}if(!/^AIza[\w-]{20,}$/.test(v)){$('gKMsg').innerHTML='<span style="color:#b91c1c">这个看起来不像 Gemini key（应该是 AIza 开头）</span>';return;}gkSet(v);};
+  if($('gKSave'))$('gKSave').onclick=()=>{const v=$('gKey').value.trim();if(!v){toast('请先贴上 key');return;}if(!/^(AIza[\w-]{20,}|AQ\.[\w.-]{20,})$/.test(v)){$('gKMsg').innerHTML='<span style="color:#b91c1c">这个看起来不像 Gemini key（应该是 AQ. 或 AIza 开头）</span>';return;}gkSet(v);};
   if($('gKDel'))$('gKDel').onclick=()=>{if(!confirmTwice('gk'))return;$('gKey').value='';gkSet('');};
   document.querySelectorAll('[data-rg]').forEach(b=>b.onclick=()=>{const k=b.dataset.rg;if(k==='view'){const a=toLL(0,H),c=toLL(W,0);findLines([a[0],a[1],c[0],c[1]].map(v=>+v.toFixed(4)),'view');}else{const r=REGIONS[k];V.lat=(r.b[0]+r.b[2])/2;V.lng=(r.b[1]+r.b[3])/2;V.z=10.5;req();findLines(r.b,k);}});
   document.querySelectorAll('[data-ln]').forEach(b=>b.onclick=()=>loadLine(+b.dataset.ln));
@@ -737,12 +737,12 @@ function segD(x,y,a,b){const dx=b[0]-a[0],dy=b[1]-a[1],l=dx*dx+dy*dy||1;let t=((
 
 
 /* ===== 🌐 网上查价钱：Gemini + Google 搜索（附来源，自己确认才填进去） ===== */
-function gkMask(){const k=gemKey();return k?k.slice(0,4)+'••••'+k.slice(-4):'';}
+function gkMask(){const k=gemKey();return k?k.slice(0,k.startsWith('AQ.')?5:4)+'••••'+k.slice(-4):'';}
 function gkStat(){return gemKey()?' <b style="color:#047857">✅ 已储存</b>':' <b style="color:#b45309">（还没放）</b>';}
 function gemKey(){try{return localStorage.getItem('prop3d-gkey')||'';}catch(e){return '';}}
-function gemModel(){try{return localStorage.getItem('prop3d-gmodel')||'gemini-2.5-flash';}catch(e){return 'gemini-2.5-flash';}}
+function gemModel(){try{return localStorage.getItem('prop3d-gmodel')||'gemini-flash-latest';}catch(e){return 'gemini-flash-latest';}}
 function needKey(){if(gemKey())return false;sheet('🤖 先放 Gemini key',`<p class="hint" style="margin-top:0">网上查价钱要用 Google Gemini（免费）。如果你在 Prop 3D 已经放过，这里会自动用同一把。</p>
-  <input id="gk2" type="password" autocomplete="off" placeholder="AIza…" style="width:100%;padding:10px;font-size:16px;border:1px solid #ccc;border-radius:10px;margin:6px 0">
+  <input id="gk2" type="password" autocomplete="off" placeholder="AQ.… 或 AIza…" style="width:100%;padding:10px;font-size:16px;border:1px solid #ccc;border-radius:10px;margin:6px 0">
   <p class="hint">免费拿 key：<a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>。只存在这台机。</p><button class="pri" id="gk2s" style="width:100%">保存</button>`);
   $('gk2s').onclick=()=>{const v=$('gk2').value.trim();if(!v)return;try{localStorage.setItem('prop3d-gkey',v);}catch(e){}toast('✅ Gemini key 已储存，再按一次 🌐 就可以查',3500);closeSheet();};return true;}
 async function webAsk(c){const st=(PLAN.stations.find(x=>x.id===c.st)||{}).name||'';
@@ -754,10 +754,10 @@ Find, only from real web pages you can cite (iProperty, PropertyGuru, Mudah, Edg
 - size_sqft: typical unit size; tenure: Freehold/Leasehold; year: completion year; units: total units
 Rules: Do NOT guess or estimate. If a number is not found in a source, use null. Make sure it is the same project (not a similarly named one elsewhere).
 Reply with ONLY one JSON object, no other text: {"found_project":true/false,"ask_psf":n,"tx_psf":n,"tx_count":n,"tx_period":"","rent_min":n,"rent_max":n,"size_sqft":n,"tenure":"","year":n,"units":n,"note":"one short line in Chinese about where the numbers came from"}`;
-  const url='https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(gemModel())+':generateContent?key='+encodeURIComponent(gemKey());
-  const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],tools:[{google_search:{}}],generationConfig:{temperature:0.1}})});
-  const j=await res.json().catch(()=>({}));
-  if(!res.ok){const m=(j.error&&j.error.message)||('HTTP '+res.status);throw new Error(res.status===429?'Gemini 免费额度用完了，等一下再试':/key|API_KEY|permission/i.test(m)?'Gemini key 不对，请检查':m);}
+  let res,j;for(const m of [gemModel(),'gemini-flash-latest','gemini-2.5-flash'].filter((x,i,A)=>A.indexOf(x)===i)){
+    res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(m)+':generateContent',{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':gemKey()},body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],tools:[{google_search:{}}],generationConfig:{temperature:0.1}})});
+    j=await res.json().catch(()=>({}));if(res.status!==404)break;}
+  if(!res.ok){const m=(j.error&&j.error.message)||('HTTP '+res.status);throw new Error(res.status===429?'Gemini 免费额度用完了，等一下再试':/key|API_KEY|permission|credential|ACCESS_TOKEN/i.test(m)?'Gemini key 不能用（'+m.slice(0,80)+'），请检查或重新拿一把':m);}
   const cd=j.candidates&&j.candidates[0]||{};const text=((cd.content&&cd.content.parts)||[]).map(p=>p.text||'').join('');
   const mm=text.match(/\{[\s\S]*\}/);let o={};try{o=mm?JSON.parse(mm[0]):{};}catch(e){o={};}
   const src=((cd.groundingMetadata&&cd.groundingMetadata.groundingChunks)||[]).map(g=>g.web).filter(Boolean).map(w=>({t:w.title||w.domain||'来源',u:w.uri})).slice(0,6);
