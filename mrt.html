@@ -373,16 +373,45 @@ async function loadLine(id){busy(1,'正在读取站点…');try{
   const t=rel.tags||{};const L=LINES.find(x=>x.id===id)||{};
   const nm0=t.name||L.name||'';PLAN={lineId:id,lineName:grpName(nm0,t.from,t.to)||nm0,color:lineCol(nm0,t.colour),stations:S.map((s,i)=>({id:i,name:s.name,lat:s.lat,lng:s.lng})),from:0,to:S.length-1,condos:null};
   savePlan();toast(`读到 ${S.length} 个站`);}catch(e){toast('读取失败：'+(e.message||e),4000);}finally{busy(0);}openSetup();refresh();}
-async function loadCondos(){if(!PLAN)return;const S=sel(),R=UI.radius;busy(1,`正在找每个站 ${R} 米内的公寓…`);try{
-  const line=S.map(s=>s.lat.toFixed(5)+','+s.lng.toFixed(5)).join(',');const ar=`(around:${R+60},${line})`;
-  const j=await overpass(`[out:json][timeout:90];(way["building"~"^(apartments|residential)$"]["name"]${ar};relation["building"~"^(apartments|residential)$"]["name"]${ar};way["residential"~"^(apartments|condominium)$"]["name"]${ar};way["landuse"="residential"]["name"~"(?i)(resid|kondo|condo|apartment|pangsapuri|suite|tower|heights|park|court|vista|avenue|regency|mansion|villa)"]${ar};);out center tags;`);
-  const G=new Map();j.elements.forEach(e=>{const t=e.tags||{};const nm=(t.name||'').trim();const c=e.center||e;if(!nm||c.lat==null)return;const k=normName(nm);if(!k||/^(blok|block|tower|menara)?\s*[a-z0-9]{0,2}$/.test(k))return;
-    const o=G.get(k)||{k,name:nm.replace(/\s*[-–]?\s*(blok|block|tower|menara)\s*[A-Z0-9]{1,2}$/i,''),la:0,lo:0,n:0};o.la+=c.lat;o.lo+=c.lon;o.n++;G.set(k,o);});
+const CONDO_RE='(?i)(resid|kondo|condo|apartment|apartmen|pangsapuri|suite|serviced|tower|heights|park|court|vista|avenue|regency|mansion|villa|lakes?|point|place|sky|garden|city|square|residensi|sentral|central|loft|soho|parc|bay|ville|duta|mont|platinum|astana|one |the )';
+async function loadCondos(){if(!PLAN)return;const S=sel(),R=UI.radius;const G=new Map();let bad=0;
+  /* 分段找（每次 5 个站），一段读不到也不会全部失败 */
+  for(let i=0;i<S.length;i+=5){const part=S.slice(i,i+5);busy(1,`正在找公寓… ${Math.min(i+5,S.length)} / ${S.length} 个站`);
+    const ar=`(around:${R+60},${part.map(s=>s.lat.toFixed(5)+','+s.lng.toFixed(5)).join(',')})`;
+    const q=`[out:json][timeout:60];(nwr["building"~"^(apartments|residential|condominium|flats)$"]["name"]${ar};nwr["residential"~"^(apartments|condominium|flats)$"]["name"]${ar};nwr["building"="yes"]["name"~"${CONDO_RE}"]${ar};nwr["building"="commercial"]["name"~"(?i)(resid|suite|soho|serviced|kondo|condo)"]${ar};nwr["landuse"="residential"]["name"~"${CONDO_RE}"]${ar};);out center tags;`;
+    let j=null;for(let t=0;t<2&&!j;t++){try{j=await overpass(q);}catch(e){await new Promise(r=>setTimeout(r,1500));}}
+    if(!j){bad++;continue;}
+    j.elements.forEach(e=>{const tg=e.tags||{};const nm=(tg['name:en']||tg.name||'').trim();const c=e.center||e;if(!nm||c.lat==null)return;if(/^(taman|kampung|kg\.?|jalan|lorong|persiaran|sekolah|masjid|surau|kuil|gereja|tnb|pencawang)\b/i.test(nm))return;
+      const k=normName(nm.replace(/\s*[-–]?\s*(blok|block|tower|menara)\s*[A-Z0-9]{1,2}$/i,''));if(!k||/^(blok|block|tower|menara)?\s*[a-z0-9]{0,2}$/.test(k))return;
+      const o=G.get(k)||{k,name:nm.replace(/\s*[-–]?\s*(blok|block|tower|menara)\s*[A-Z0-9]{1,2}$/i,''),la:0,lo:0,n:0};o.la+=c.lat;o.lo+=c.lon;o.n++;G.set(k,o);});}
+  busy(0);
   const out=[];for(const o of G.values()){const la=o.la/o.n,lo=o.lo/o.n;let best=null,bd=1e9;S.forEach(s=>{const d=hav(la,lo,s.lat,s.lng);if(d<bd){bd=d;best=s;}});
     if(best&&bd<=R)out.push({k:o.k,name:o.name,short:o.name.length>22?o.name.replace(/\s*@.*$/,'').slice(0,22):o.name,lat:la,lng:lo,st:best.id,dist:Math.round(bd)});}
   const keep=(PLAN.condos||[]).filter(c=>c.manual);PLAN.condos=out.concat(keep.filter(m=>!out.some(o=>o.k===m.k)));PLAN.radius=R;savePlan();
-  toast(`找到 ${out.length} 个公寓 / 住宅楼`,3000);}catch(e){toast('找公寓失败：'+(e.message||e),4000);}finally{busy(0);}
-  closeSheet();refresh();fitPts(sel().map(s=>[s.lat,s.lng]));}
+  closeSheet();refresh();fitPts(S.map(s=>[s.lat,s.lng]));
+  if(bad)toast(`找到 ${out.length} 个公寓，有 ${bad} 段网络读不到，可以再按一次「找公寓」`,5000);else toast(`找到 ${out.length} 个公寓 / 住宅楼`,3000);
+  if(!out.length&&!keep.length)setTimeout(()=>openAddCondos(),600);}
+/* ===== 自己加楼盘：打名字（可以一次贴很多个）或在地图上点 ===== */
+function openAddCondos(sid){if(!PLAN){openSetup();return;}const S=sel();
+  sheet('＋ 加楼盘',`<p class="hint" style="margin-top:0">地图资料（OpenStreetMap）不是每个楼盘都有。你可以：</p>
+   <label style="font-weight:800">① 打楼盘名字，一行一个，可以一次贴很多个</label>
+   <textarea id="acN" rows="5" placeholder="例如：&#10;The Netizen&#10;Trion@KL&#10;Pavilion Embassy" style="width:100%;font-size:16px;padding:10px;border-radius:10px;border:1px solid #ccc;margin:6px 0"></textarea>
+   <button class="pri" id="acGo" style="width:100%">🔍 找位置并加进去</button><div id="acR" class="hint"></div>
+   <label style="font-weight:800;display:block;margin-top:14px">② 找不到的，在地图上点它的位置</label>
+   <div class="row" style="margin-top:6px"><button id="acMap">📍 在地图上点位置</button></div>
+   <p class="hint">③ 很多个楼盘：用「☰ 路线 → 价格资料 → 导入表格」，表格里有 name、lat、lng 就会加进去。</p>`);
+  $('acMap').onclick=()=>startAdd(sid!=null?sid:(ACT&&ACT.st!=null?ACT.st:S[0].id));
+  $('acGo').onclick=async()=>{const names=$('acN').value.split(/\n|,|，|、/).map(x=>x.trim()).filter(Boolean);if(!names.length){toast('请先打名字');return;}
+    let la0=90,la1=-90,lo0=180,lo1=-180;S.forEach(s=>{la0=Math.min(la0,s.lat);la1=Math.max(la1,s.lat);lo0=Math.min(lo0,s.lng);lo1=Math.max(lo1,s.lng);});const pad=0.03;
+    const vb=[lo0-pad,la1+pad,lo1+pad,la0-pad].map(v=>v.toFixed(4)).join(',');const ok=[],miss=[];PLAN.condos=PLAN.condos||[];
+    for(let i=0;i<names.length;i++){const nm=names[i];$('acR').textContent=`正在找 ${i+1} / ${names.length}：${nm}…`;let hit=null;
+      for(const extra of ['&bounded=1','']){try{const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=my&viewbox=${vb}${extra}&q=${encodeURIComponent(nm)}`);const j=await r.json();
+        if(j&&j.length){let b=null,bd=1e9;j.forEach(x=>{const la=+x.lat,lo=+x.lon;S.forEach(s=>{const d=hav(la,lo,s.lat,s.lng);if(d<bd){bd=d;b={la,lo,s,d};}});});if(b&&b.d<5000){hit=b;break;}}}catch(e){}await new Promise(r=>setTimeout(r,1100));}
+      if(!hit){miss.push(nm);continue;}const k=normName(nm)||('m'+Date.now()+i);const ex=PLAN.condos.find(c=>c.k===k);
+      const c={k,name:nm,short:nm.slice(0,22),lat:hit.la,lng:hit.lo,st:hit.s.id,dist:Math.round(hit.d),manual:true};if(ex)Object.assign(ex,c);else PLAN.condos.push(c);ok.push(nm+'（'+hit.s.name+' '+Math.round(hit.d)+' 米）');}
+    savePlan();refresh();
+    $('acR').innerHTML=(ok.length?`✅ 加了 ${ok.length} 个：<br>${ok.map(esc).join('<br>')}`:'')+(miss.length?`<br><br>❌ 找不到 ${miss.length} 个：<b>${miss.map(esc).join('、')}</b><br>请用 ② 在地图上点它的位置。`:'');
+    if(!miss.length)$('acN').value='';else $('acN').value=miss.join('\n');};}
 
 /* ========== 底部站名条 ========== */
 function stStats(sid){const L=condos().filter(c=>c.st===sid),v=L.map(pv).filter(x=>x>0);return {n:L.length,m:med(v),L};}
@@ -407,9 +436,9 @@ function openOverview(){if(!PLAN){openSetup();return;}ACT=null;const S=sel();con
    <div><small>最便宜的站</small><b style="font-size:15px">${lo?esc(lo.s.name):'—'}</b><em>${lo?'RM'+Math.round(lo.m)+' psf':''}</em></div>
    <div><small>最贵的站</small><b style="font-size:15px">${hi?esc(hi.s.name):'—'}</b><em>${hi?'RM'+Math.round(hi.m)+' psf':''}</em></div></div>
    ${ft&&fv?`<p class="hint">⭐ 主推 <b>${esc(ft.name)}</b>：RM${Math.round(fv)} psf，${(()=>{const m=stStats(ft.st).m;if(!m)return '';const p=Math.round((fv-m)/m*100);return `比本站中位${p<0?'便宜':'贵'} ${Math.abs(p)}%`;})()}</p>`:''}
-   <canvas class="chart" id="chart"></canvas>
+   <div class="row" style="margin:6px 0 10px"><button class="pri" id="ovAdd">＋ 加楼盘</button></div><canvas class="chart" id="chart"></canvas>
    <p class="hint">每条 = 一个站 ${UI.radius} 米内公寓的中位 psf，条下数字是盘数。金色虚线是你的主推盘。颜色和地图一样：青便宜、橙中等、红贵（按这条线自己的价格分三档）。</p>`);
-  setTimeout(()=>chart(rows,fv),30);refresh(true);fitPts(S.map(s=>[s.lat,s.lng]));}
+  if($('ovAdd'))$('ovAdd').onclick=()=>openAddCondos();setTimeout(()=>chart(rows,fv),30);refresh(true);fitPts(S.map(s=>[s.lat,s.lng]));}
 function chart(rows,fv){const c=$('chart');if(!c)return;const dpr=Math.min(2,devicePixelRatio||1),w=c.clientWidth,h=Math.max(220,Math.min(300,w*0.6));c.style.height=h+'px';c.width=w*dpr;c.height=h*dpr;const x=c.getContext('2d');x.scale(dpr,dpr);
   const n=rows.length,pl=40,pr=10,pt=18,pb=96,bw=(w-pl-pr)/n,mx=Math.max(...rows.map(r=>r.m),fv,1)*1.12;
   x.font='600 10px sans-serif';x.fillStyle='#6b756f';x.strokeStyle='#eee6d8';x.lineWidth=1;
@@ -425,9 +454,9 @@ function openStation(sid){const s=PLAN.stations.find(x=>x.id===sid);if(!s)return
   sheet(s.name,`<div class="big"><div><small>${UI.radius} 米内</small><b>${t.n} 个盘</b><em>直线距离</em></div><div><small>中位 ${UI.pm==='tx'?'成交':'叫价'}</small><b>${t.m?'RM'+Math.round(t.m):'—'}</b><em>psf</em></div></div>
    ${L.map(c=>{const d=DATA[c.k]||{},tr=tierOf(c),col=tr==='ft'?'#D9B772':['#9aa39f','#2F7D5B','#BE8A2E','#9E3344'][tr];const rent=+d.rmin||0;
      return `<div class="li" data-c="${esc(c.k)}"><span class="dot" style="border-color:${col};background:${tr==='ft'?col:'#fff'}"></span><div class="nm"><b>${d.feat?'⭐ ':''}${esc(c.name)}</b><small>${c.dist} 米 · 走路约 ${walkMin(c.dist)} 分钟${rent?' · 起租 RM'+rent:''}</small></div>
-     <div class="pv">${+d.ask?'RM'+Math.round(d.ask):'—'}<small>${+d.tx?'成交 RM'+Math.round(d.tx)+(d.txn?' · '+d.txn+'笔':''):'叫价 psf'}</small></div></div>`;}).join('')||'<p class="hint">这个站附近在地图资料里没找到公寓。可以按下面的按钮自己加。</p>'}
-   <div class="row" style="margin-top:10px"><button id="addC">＋ 在地图上加一个公寓</button></div>`);
-  $('shB').querySelectorAll('[data-c]').forEach(e=>e.onclick=()=>openCondo(e.dataset.c));$('addC').onclick=()=>startAdd(sid);
+     <div class="pv">${+d.ask?'RM'+Math.round(d.ask):'—'}<small>${+d.tx?'成交 RM'+Math.round(d.tx)+(d.txn?' · '+d.txn+'笔':''):'叫价 psf'}</small></div></div>`;}).join('')||'<p class="hint">这个站附近在地图资料里没找到公寓。按下面「＋ 加楼盘」打名字就可以加。</p>'}
+   <div class="row" style="margin-top:10px"><button class="pri" id="addC">＋ 加楼盘（打名字 / 在地图点）</button></div>`);
+  $('shB').querySelectorAll('[data-c]').forEach(e=>e.onclick=()=>openCondo(e.dataset.c));$('addC').onclick=()=>openAddCondos(sid);
   refresh(true);setTimeout(()=>flyVis(s.lat,s.lng,Math.max(15.6,V.z)),30);}
 function ipUrl(c,m){/* iProperty 每个盘的网址有编号，用 Google 只搜 iProperty 最稳 */return 'https://www.google.com/search?q='+encodeURIComponent(c.name+(m==='rent'?' for rent':' for sale')+' site:iproperty.com.my');}
 function openCondo(k){const c=PLAN.condos.find(x=>x.k===k);if(!c)return;ACT={c:k,st:c.st};const d=dOf(c),s=PLAN.stations.find(x=>x.id===c.st)||{};
