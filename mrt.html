@@ -440,9 +440,9 @@ function openOverview(){if(!PLAN){openSetup();return;}ACT=null;const S=sel();con
    <div><small>最便宜的站</small><b style="font-size:15px">${lo?esc(lo.s.name):'—'}</b><em>${lo?'RM'+Math.round(lo.m)+' psf':''}</em></div>
    <div><small>最贵的站</small><b style="font-size:15px">${hi?esc(hi.s.name):'—'}</b><em>${hi?'RM'+Math.round(hi.m)+' psf':''}</em></div></div>
    ${ft&&fv?`<p class="hint">⭐ 主推 <b>${esc(ft.name)}</b>：RM${Math.round(fv)} psf，${(()=>{const m=stStats(ft.st).m;if(!m)return '';const p=Math.round((fv-m)/m*100);return `比本站中位${p<0?'便宜':'贵'} ${Math.abs(p)}%`;})()}</p>`:''}
-   <div class="row" style="margin:6px 0 10px"><button class="pri" id="ovAdd">＋ 加楼盘</button></div><canvas class="chart" id="chart"></canvas>
+   <div class="row" style="margin:6px 0 10px"><button class="pri" id="ovAdd">＋ 加楼盘</button><button class="pri" id="ovWeb" style="background:#1d4ed8;border-color:#1d4ed8">🌐 全线网上查价钱</button></div><canvas class="chart" id="chart"></canvas>
    <p class="hint">每条 = 一个站 ${UI.radius} 米内公寓的中位 psf，条下数字是盘数。金色虚线是你的主推盘。颜色和地图一样：青便宜、橙中等、红贵（按这条线自己的价格分三档）。</p>`);
-  if($('ovAdd'))$('ovAdd').onclick=()=>openAddCondos();setTimeout(()=>chart(rows,fv),30);refresh(true);fitPts(S.map(s=>[s.lat,s.lng]));}
+  if($('ovAdd'))$('ovAdd').onclick=()=>openAddCondos();if($('ovWeb'))$('ovWeb').onclick=webAll;setTimeout(()=>chart(rows,fv),30);refresh(true);fitPts(S.map(s=>[s.lat,s.lng]));}
 function chart(rows,fv){const c=$('chart');if(!c)return;const dpr=Math.min(2,devicePixelRatio||1),w=c.clientWidth,h=Math.max(220,Math.min(300,w*0.6));c.style.height=h+'px';c.width=w*dpr;c.height=h*dpr;const x=c.getContext('2d');x.scale(dpr,dpr);
   const n=rows.length,pl=40,pr=10,pt=18,pb=96,bw=(w-pl-pr)/n,mx=Math.max(...rows.map(r=>r.m),fv,1)*1.12;
   x.font='600 10px sans-serif';x.fillStyle='#6b756f';x.strokeStyle='#eee6d8';x.lineWidth=1;
@@ -471,6 +471,7 @@ function openCondo(k){const c=PLAN.condos.find(x=>x.k===k);if(!c)return;ACT={c:k
    <div><small>月租</small><b>${+d.rmin?'RM'+d.rmin+(+d.rmax?'–'+d.rmax:''):'—'}</b><em>${y?'回报率约 '+y.toFixed(1)+'%':'填面积可算回报率'}</em></div>
    <div><small>叫价 vs 成交</small><b style="font-size:15px">${gapTxt(d)||'—'}</b><em>${d.tenure?esc(d.tenure):''}${d.yr?' · '+d.yr+' 年':''}${d.units?' · '+d.units+' 户':''}</em></div></div>
    <div class="row"><button class="${d.feat?'on':'gold'}" id="cFt">${d.feat?'⭐ 已是主推（再按取消）':'⭐ 设为主推'}</button></div>
+   <div class="row" style="margin-top:8px"><button class="pri" id="cWeb" style="background:#1d4ed8;border-color:#1d4ed8">🌐 网上查价钱（Gemini）</button></div>${webInfo(d)}<div id="cWebR"></div>
    <div class="row" style="margin-top:8px"><a class="btn" href="${ipUrl(c,'sale')}" target="_blank" rel="noopener">🏷 iProperty 买卖价 ↗</a><a class="btn" href="${ipUrl(c,'rent')}" target="_blank" rel="noopener">🔑 iProperty 租金 ↗</a></div>
    <div class="row" style="margin-top:8px"><button class="pri" id="cDrv">🚗 开车去 ${esc(s.name||'')} 站</button><button id="cWlk">🚶 走路去 ${esc(s.name||'')} 站</button></div>
    <div class="row" style="margin-top:8px"><button id="cLm">📍 周边地标</button><button id="cRt">🛣 更多路线</button></div>
@@ -487,7 +488,7 @@ function openCondo(k){const c=PLAN.condos.find(x=>x.k===k);if(!c)return;ACT={c:k
     <label>地图短名</label><input type="text" id="fShort" value="${esc(c.short||'')}">
    </div><div class="row"><button class="pri" id="cSave">储存</button>${c.manual?'<button id="cDel">删除这个盘</button>':'<button id="cHide">从图上拿掉</button>'}</div></details>`);
   $('cLm').onclick=()=>{ACT={c:k,st:c.st};openLandmarks();};const og={lat:c.lat,lng:c.lng,name:c.short||c.name},sd={lat:s.lat,lng:s.lng,name:(s.name||'')+' 站'};if($('cDrv'))$('cDrv').onclick=()=>{ACT={c:k,st:c.st};routeTo(sd,'drive',og);};if($('cWlk'))$('cWlk').onclick=()=>{ACT={c:k,st:c.st};routeTo(sd,'walk',og);};$('cRt').onclick=()=>{ACT={c:k,st:c.st};openRoutes();};
-  $('cFt').onclick=()=>{const was=!!d.feat;PLAN.condos.forEach(x=>{if(DATA[x.k])DATA[x.k].feat=false;});d.feat=!was;saveData();openCondo(k);};
+  $('cWeb').onclick=()=>webOne(c);$('cFt').onclick=()=>{const was=!!d.feat;PLAN.condos.forEach(x=>{if(DATA[x.k])DATA[x.k].feat=false;});d.feat=!was;saveData();openCondo(k);};
   $('cSave').onclick=()=>{const n=id=>{const v=$(id).value.trim();return v===''?'':+v;};Object.assign(d,{ask:n('fAsk'),tx:n('fTx'),txn:n('fTxn'),rmin:n('fRmin'),rmax:n('fRmax'),size:n('fSize'),units:n('fUnits'),yr:n('fYr'),tenure:$('fTen').value.trim(),demo:false});
     c.short=$('fShort').value.trim()||c.short;saveData();savePlan();toast('已储存');openCondo(k);};
   const rm=()=>{PLAN.condos=PLAN.condos.filter(x=>x.k!==k);savePlan();closeSheet();toast('已拿掉');};if($('cDel'))$('cDel').onclick=rm;if($('cHide'))$('cHide').onclick=rm;
@@ -519,7 +520,11 @@ function openSetup(){LINES=LINES.length?LINES:LS.get('rcm-lines',[]);const st=PL
    <details style="margin-top:12px"><summary>📄 价格资料：导入 / 导出</summary>
     <p class="hint">按「导出表格」得到一份 CSV，里面已经列好所有公寓名字。用 Excel 填叫价、成交价、月租后，按「导入表格」就更新。来源建议：叫价取 iProperty / PropertyGuru 中位；成交价取 NAPIC 开放数据或 Brickz。</p>
     <div class="row"><button id="dExp">⬇ 导出表格</button><button id="dImp">⬆ 导入表格</button><button id="dDemo">填入示意数字（演示用）</button><button id="dClr">清除全部价格</button></div></details>
-   <p class="hint">线路、站点、楼名来自免费的 OpenStreetMap。价格要自己填，或用 Excel 导入。</p>`);
+   <details style="margin-top:10px"><summary>🤖 Gemini key（网上查价钱用）</summary>
+    <p class="hint">跟 Prop 3D 用同一把。只存在这台机，不会上传。免费拿：<a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a></p>
+    <input id="gKey" type="password" autocomplete="off" placeholder="AIza…" value="${esc(gemKey())}" style="width:100%;padding:10px;font-size:16px;border:1px solid #ccc;border-radius:10px"></details>
+   <p class="hint">线路、站点、楼名来自免费的 OpenStreetMap。价格要自己填、用 Excel 导入，或按 🌐 网上查。</p>`);
+  if($('gKey'))$('gKey').onchange=e=>{try{localStorage.setItem('prop3d-gkey',e.target.value.trim());}catch(_){}toast('已保存 Gemini key');};
   document.querySelectorAll('[data-rg]').forEach(b=>b.onclick=()=>{const k=b.dataset.rg;if(k==='view'){const a=toLL(0,H),c=toLL(W,0);findLines([a[0],a[1],c[0],c[1]].map(v=>+v.toFixed(4)),'view');}else{const r=REGIONS[k];V.lat=(r.b[0]+r.b[2])/2;V.lng=(r.b[1]+r.b[3])/2;V.z=10.5;req();findLines(r.b,k);}});
   document.querySelectorAll('[data-ln]').forEach(b=>b.onclick=()=>loadLine(+b.dataset.ln));
   if($('sFrom'))$('sFrom').onchange=e=>{PLAN.from=+e.target.value;savePlan();refresh();};
@@ -726,6 +731,61 @@ mp.addEventListener('click',e=>{if(ADD||!NET||RT.on||V.z<8.5)return;if(DN&&Math.
   let best=null,bd=16;for(const L of NET.lines)for(const w of L.ways){let a=toScr(w[0],w[1]);for(let i=2;i<w.length;i+=2){const b=toScr(w[i],w[i+1]);if(a[2]>0&&b[2]>0){const d=segD(e.clientX,e.clientY,a,b);if(d<bd){bd=d;best=L;}}a=b;}}
   if(best)pickLine(best);});
 function segD(x,y,a,b){const dx=b[0]-a[0],dy=b[1]-a[1],l=dx*dx+dy*dy||1;let t=((x-a[0])*dx+(y-a[1])*dy)/l;t=Math.max(0,Math.min(1,t));return Math.hypot(x-a[0]-t*dx,y-a[1]-t*dy);}
+
+
+/* ===== 🌐 网上查价钱：Gemini + Google 搜索（附来源，自己确认才填进去） ===== */
+function gemKey(){try{return localStorage.getItem('prop3d-gkey')||'';}catch(e){return '';}}
+function gemModel(){try{return localStorage.getItem('prop3d-gmodel')||'gemini-2.5-flash';}catch(e){return 'gemini-2.5-flash';}}
+function needKey(){if(gemKey())return false;sheet('🤖 先放 Gemini key',`<p class="hint" style="margin-top:0">网上查价钱要用 Google Gemini（免费）。如果你在 Prop 3D 已经放过，这里会自动用同一把。</p>
+  <input id="gk2" type="password" autocomplete="off" placeholder="AIza…" style="width:100%;padding:10px;font-size:16px;border:1px solid #ccc;border-radius:10px;margin:6px 0">
+  <p class="hint">免费拿 key：<a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>。只存在这台机。</p><button class="pri" id="gk2s" style="width:100%">保存</button>`);
+  $('gk2s').onclick=()=>{const v=$('gk2').value.trim();if(!v)return;try{localStorage.setItem('prop3d-gkey',v);}catch(e){}toast('已保存，再按一次 🌐 就可以查');closeSheet();};return true;}
+async function webAsk(c){const st=(PLAN.stations.find(x=>x.id===c.st)||{}).name||'';
+  const prompt=`You are a Malaysian property data researcher. Use Google Search to find CURRENT market data for the residential project "${c.name}" near ${st} station (lat ${c.lat.toFixed(5)}, lng ${c.lng.toFixed(5)}), Malaysia.
+Find, only from real web pages you can cite (iProperty, PropertyGuru, Mudah, EdgeProp, Brickz, NAPIC):
+- ask_psf: typical current asking price for sale in RM per sq ft (median of current listings)
+- tx_psf: recent actual transaction price in RM per sq ft (Brickz / NAPIC / EdgeProp transacted data), tx_count: number of transactions it is based on, tx_period: e.g. "2024-2025"
+- rent_min, rent_max: typical monthly rent range in RM for a whole unit
+- size_sqft: typical unit size; tenure: Freehold/Leasehold; year: completion year; units: total units
+Rules: Do NOT guess or estimate. If a number is not found in a source, use null. Make sure it is the same project (not a similarly named one elsewhere).
+Reply with ONLY one JSON object, no other text: {"found_project":true/false,"ask_psf":n,"tx_psf":n,"tx_count":n,"tx_period":"","rent_min":n,"rent_max":n,"size_sqft":n,"tenure":"","year":n,"units":n,"note":"one short line in Chinese about where the numbers came from"}`;
+  const url='https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(gemModel())+':generateContent?key='+encodeURIComponent(gemKey());
+  const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],tools:[{google_search:{}}],generationConfig:{temperature:0.1}})});
+  const j=await res.json().catch(()=>({}));
+  if(!res.ok){const m=(j.error&&j.error.message)||('HTTP '+res.status);throw new Error(res.status===429?'Gemini 免费额度用完了，等一下再试':/key|API_KEY|permission/i.test(m)?'Gemini key 不对，请检查':m);}
+  const cd=j.candidates&&j.candidates[0]||{};const text=((cd.content&&cd.content.parts)||[]).map(p=>p.text||'').join('');
+  const mm=text.match(/\{[\s\S]*\}/);let o={};try{o=mm?JSON.parse(mm[0]):{};}catch(e){o={};}
+  const src=((cd.groundingMetadata&&cd.groundingMetadata.groundingChunks)||[]).map(g=>g.web).filter(Boolean).map(w=>({t:w.title||w.domain||'来源',u:w.uri})).slice(0,6);
+  const num=v=>{v=+String(v==null?'':v).replace(/[^\d.]/g,'');return v>0?v:null;};
+  return {ok:o.found_project!==false,ask:num(o.ask_psf),tx:num(o.tx_psf),txn:num(o.tx_count),per:o.tx_period||'',rmin:num(o.rent_min),rmax:num(o.rent_max),size:num(o.size_sqft),tenure:o.tenure||'',yr:num(o.year),units:num(o.units),note:o.note||'',src};}
+function webHTML(r){if(!r.ok)return `<p class="hint">❌ 网上找不到这个楼盘的资料（可能名字不一样，试试在 ✏️ 改名字后再查）。</p>`;
+  const f=(v,p,s)=>v?`${p||''}${Math.round(v).toLocaleString()}${s||''}`:'—';
+  return `<div style="border:2px solid #1d4ed8;border-radius:12px;padding:10px;margin:8px 0;background:#eff6ff">
+   <b>🌐 网上查到（${new Date().toLocaleDateString('zh-CN')}）</b>
+   <div class="hint" style="margin:6px 0;line-height:1.7">现在叫价：<b>${f(r.ask,'RM',' psf')}</b><br>以前成交：<b>${f(r.tx,'RM',' psf')}</b>${r.txn?' · '+r.txn+' 笔':''}${r.per?' · '+esc(r.per):''}<br>月租：<b>${r.rmin?f(r.rmin,'RM')+(r.rmax?'–'+Math.round(r.rmax):''):'—'}</b>${r.size?' · 面积约 '+Math.round(r.size)+' sqft':''}${r.tenure?' · '+esc(r.tenure):''}${r.yr?' · '+r.yr+' 年':''}</div>
+   ${r.note?`<div class="hint">${esc(r.note)}</div>`:''}
+   <div class="hint">来源：${r.src.length?r.src.map(x=>`<a href="${esc(x.u)}" target="_blank" rel="noopener">${esc(x.t)}</a>`).join(' · '):'<b style="color:#b45309">没有附来源，请小心</b>'}</div>
+   <div class="hint" style="color:#b45309">AI 读网页可能会错，按来源核对一下再用。</div></div>`;}
+function webApply(c,r){const d=dOf(c);['ask','tx','txn','rmin','rmax','size','yr','units'].forEach(k=>{if(r[k])d[k]=Math.round(r[k]);});if(r.tenure)d.tenure=r.tenure;d.demo=false;
+  d.web={at:new Date().toISOString().slice(0,10),src:r.src,per:r.per};saveData();}
+function webInfo(d){if(!d.web)return '';return `<p class="hint">🌐 价钱是 ${esc(d.web.at)} 网上查的${d.web.per?'（成交 '+esc(d.web.per)+'）':''}：${(d.web.src||[]).slice(0,3).map(x=>`<a href="${esc(x.u)}" target="_blank" rel="noopener">${esc(x.t)}</a>`).join(' · ')||'没有来源'}</p>`;}
+async function webOne(c){if(needKey())return;const box=$('cWebR');if(box)box.innerHTML='<p class="hint">🌐 正在网上查 '+esc(c.name)+'…（大约 10–20 秒）</p>';
+  try{const r=await webAsk(c);if(!$('cWebR'))return;$('cWebR').innerHTML=webHTML(r)+(r.ok&&(r.ask||r.tx||r.rmin)?`<div class="row"><button class="pri" id="cWebOk">✅ 填进去</button></div>`:'');
+    if($('cWebOk'))$('cWebOk').onclick=()=>{webApply(c,r);refresh();openCondo(c.k);toast('已填进去');};}
+  catch(e){if($('cWebR'))$('cWebR').innerHTML=`<p class="hint" style="color:#b91c1c">查不到：${esc(e.message||String(e))}</p>`;}}
+let WEBSTOP=false;
+async function webAll(){if(needKey())return;const L=condos().filter(c=>{const d=DATA[c.k]||{};return !d.web&&!(+d.ask&&!d.demo);});
+  if(!L.length){toast('全部楼盘都已经有价钱了');return;}WEBSTOP=false;const R=[];
+  sheet('🌐 全线网上查价钱',`<p class="hint" style="margin-top:0">要查 <b>${L.length}</b> 个楼盘（已经有真实价钱的会跳过）。Gemini 免费版每分钟只能查几次，所以一个一个慢慢查，大约每个 10 秒。可以先关掉这个画面做别的。</p>
+   <div id="waP" class="hint"></div><div id="waL"></div><div class="row"><button id="waStop">⏹ 停</button><button class="pri" id="waOk" style="display:none">✅ 把打勾的全部填进去</button></div>`);
+  $('waStop').onclick=()=>{WEBSTOP=true;};
+  const show=()=>{const el=$('waL');if(!el)return;el.innerHTML=R.map((x,i)=>`<label class="li" style="align-items:flex-start"><input type="checkbox" data-wa="${i}" ${x.r&&x.r.ok&&(x.r.ask||x.r.tx||x.r.rmin)?'checked':'disabled'} style="width:22px;height:22px;margin-top:2px"><div class="nm"><b>${esc(x.c.name)}</b><small>${x.err?'❌ '+esc(x.err):!x.r.ok?'❌ 找不到':`叫价 ${x.r.ask?'RM'+Math.round(x.r.ask):'—'} · 成交 ${x.r.tx?'RM'+Math.round(x.r.tx):'—'} · 租 ${x.r.rmin?'RM'+Math.round(x.r.rmin)+(x.r.rmax?'–'+Math.round(x.r.rmax):''):'—'} · ${x.r.src.length} 个来源`}</small></div></label>`).join('');
+    if($('waOk'))$('waOk').style.display=R.some(x=>x.r&&x.r.ok)?'':'none';};
+  for(let i=0;i<L.length&&!WEBSTOP;i++){const c=L[i];if($('waP'))$('waP').textContent=`正在查 ${i+1} / ${L.length}：${c.name}…`;
+    try{R.push({c,r:await webAsk(c)});}catch(e){R.push({c,err:e.message||String(e)});if(/额度/.test(e.message||'')){await new Promise(r=>setTimeout(r,30000));}if(/key/.test(e.message||''))break;}
+    show();if(i<L.length-1)await new Promise(r=>setTimeout(r,6500));}
+  if($('waP'))$('waP').textContent=`查完 ${R.length} 个。打勾的是找到资料的，可以按来源核对后再填进去。`;show();
+  if($('waOk'))$('waOk').onclick=()=>{let n=0;document.querySelectorAll('[data-wa]').forEach(b=>{if(b.checked){const x=R[+b.dataset.wa];if(x&&x.r){webApply(x.c,x.r);n++;}}});refresh();toast(`已填进去 ${n} 个`);openOverview();};}
 
 window.__rcm={PLAN:()=>PLAN,DATA:()=>DATA,V};
 </script>
